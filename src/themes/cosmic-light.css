@@ -1,0 +1,40 @@
+/* COSMIC Light — styled after System76's COSMIC light desktop: warm cream
+   surfaces, a maroon/terracotta accent, rounded roomy controls, system sans. */
+[data-theme="cosmic-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #f4eee7;
+  --foreground: #2d2926;
+  --muted: rgba(45, 41, 38, 0.55);
+
+  --primary: #9a3e3e;
+  /* light text (the cream background) reads well on the dark maroon accent */
+  --primary-foreground: #faf6f1;
+
+  --today: #9a3e3e;
+  --highlight: #a85532; /* year view */
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  /* Warm dark tint so hover/secondary/card surfaces darken the cream base. */
+  --hover-tint: #5a4a42;
+  --hover-mix: 9%;
+
+  --divider: #e2d8ce;
+  --border-button: #d8cdc2;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}

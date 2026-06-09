@@ -1,0 +1,83 @@
+import { useRef, useState, MouseEventHandler } from "react"
+
+import { EventContextMenu } from "@/components/EventContextMenu"
+import { LANE_GAP, LANE_HEIGHT } from "@/components/main/month-view/Row"
+import { UntitledEventText } from "@/components/ui/untitled-event-text"
+
+import type { AllDayLaneItem } from "@/hooks/cal-events/useMonthEventLayout"
+import { pointAnchorFromClick, setEventAnchor } from "@/lib/event-anchor"
+import { getEventBlockClasses, getEventBlockStyle } from "@/lib/event-styles"
+import { cn } from "@/lib/utils"
+
+export function MonthAllDayEvent({
+  item,
+  highlighted: highlightedByParent,
+  isPending,
+  isDeclined,
+  isDraft,
+  dimmed,
+  onClick,
+}: {
+  item: AllDayLaneItem
+  highlighted: boolean
+  isPending: boolean
+  isDeclined: boolean
+  isDraft: boolean
+  dimmed: boolean
+  onClick: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [contextOpen, setContextOpen] = useState(false)
+
+  const highlighted = highlightedByParent || contextOpen
+  const isDashed = isPending || isDeclined
+
+  const fillsRow = item.endCol - item.startCol === 7
+
+  const handleClick: MouseEventHandler<HTMLDivElement> | undefined = (e) => {
+    if (!isDraft) {
+      e.stopPropagation()
+      setEventAnchor(fillsRow ? pointAnchorFromClick(e) : e.currentTarget)
+      onClick()
+    }
+  }
+
+  const inner = (
+    <div
+      ref={ref}
+      data-event-clickable={!isDraft || undefined}
+      className={cn(
+        getEventBlockClasses(highlighted, isDeclined),
+        "absolute truncate px-1 py-px leading-4",
+        isDashed && "opacity-50",
+        !isDraft && dimmed && "opacity-50",
+        item.isStart && "rounded-l",
+        item.isEnd && "rounded-r",
+      )}
+      style={{
+        top: `${item.lane * LANE_HEIGHT}px`,
+        height: `${LANE_HEIGHT - LANE_GAP}px`,
+        left: `calc(${((item.startCol - 1) / 7) * 100}% + ${item.isStart ? 3 : -2}px)`,
+        right: `calc(${((7 - (item.endCol - 1)) / 7) * 100}% + ${item.isEnd ? 4 : -2}px)`,
+        ...getEventBlockStyle({
+          calendarColor: item.calendarColor,
+          eventColor: item.event.color,
+          highlighted,
+          isDashed,
+          isDraft,
+        }),
+      }}
+      onClick={handleClick}
+    >
+      {item.event.summary || <UntitledEventText />}
+    </div>
+  )
+
+  if (isDraft) return inner
+
+  return (
+    <EventContextMenu event={item.event} anchorRef={ref} onOpenChange={setContextOpen}>
+      {inner}
+    </EventContextMenu>
+  )
+}
