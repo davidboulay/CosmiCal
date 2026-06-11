@@ -1,4 +1,4 @@
-import { listen } from "@tauri-apps/api/event"
+import { emit, listen } from "@tauri-apps/api/event"
 import {
   ReactNode,
   createContext,
@@ -13,7 +13,12 @@ import { z } from "zod"
 
 import { rpc } from "@/rpc"
 import type { Calendar } from "@/rpc/bindings"
-import { CALDIR_CHANGED, CALENDAR_DIR_CHANGED } from "@/rpc/events"
+import {
+  ACCOUNT_NAME_OVERRIDES_CHANGED,
+  CALDIR_CHANGED,
+  CALENDAR_COLOR_OVERRIDES_CHANGED,
+  CALENDAR_DIR_CHANGED,
+} from "@/rpc/events"
 
 import { useLocalStorage } from "@/hooks/useLocalStorage"
 import { logger } from "@/lib/logger"
@@ -115,7 +120,9 @@ export function CalendarStateProvider({
 
   const setCalendarColor = useCallback(
     (slug: string, color: string) => {
-      setColorOverrides({ ...calendarColorOverrides, [slug]: color })
+      const next = { ...calendarColorOverrides, [slug]: color }
+      setColorOverrides(next)
+      void emit(CALENDAR_COLOR_OVERRIDES_CHANGED, next)
     },
     [calendarColorOverrides, setColorOverrides],
   )
@@ -124,6 +131,7 @@ export function CalendarStateProvider({
       const next = { ...calendarColorOverrides }
       delete next[slug]
       setColorOverrides(next)
+      void emit(CALENDAR_COLOR_OVERRIDES_CHANGED, next)
     },
     [calendarColorOverrides, setColorOverrides],
   )
@@ -141,6 +149,7 @@ export function CalendarStateProvider({
       if (trimmed) next[account] = trimmed
       else delete next[account]
       setAccountNameOverrides(next)
+      void emit(ACCOUNT_NAME_OVERRIDES_CHANGED, next)
     },
     [accountNameOverrides, setAccountNameOverrides],
   )
@@ -149,9 +158,27 @@ export function CalendarStateProvider({
       const next = { ...accountNameOverrides }
       delete next[account]
       setAccountNameOverrides(next)
+      void emit(ACCOUNT_NAME_OVERRIDES_CHANGED, next)
     },
     [accountNameOverrides, setAccountNameOverrides],
   )
+
+  // These overrides are edited in the separate Settings window but must be
+  // reflected live in the main window's sidebar/views. localStorage alone
+  // doesn't notify other webview windows, so mirror changes over Tauri events.
+  useEffect(() => {
+    const unlistenNames = listen<Record<string, string>>(ACCOUNT_NAME_OVERRIDES_CHANGED, (event) =>
+      setAccountNameOverrides(event.payload),
+    )
+    const unlistenColors = listen<Record<string, string>>(
+      CALENDAR_COLOR_OVERRIDES_CHANGED,
+      (event) => setColorOverrides(event.payload),
+    )
+    return () => {
+      void unlistenNames.then((fn) => fn())
+      void unlistenColors.then((fn) => fn())
+    }
+  }, [setAccountNameOverrides, setColorOverrides])
 
   const [hiddenSlugs, setHiddenSlugs] = useLocalStorage("hiddenCalendars", z.array(z.string()), [])
   const hiddenCalendarSlugs = useMemo(() => new Set(hiddenSlugs), [hiddenSlugs])

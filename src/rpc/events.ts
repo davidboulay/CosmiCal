@@ -11,3 +11,7 @@ export const START_AT_LOGIN_CHANGED = "start-at-login-changed"
 export const EXTRA_TIMEZONES_CHANGED = "extra-timezones-changed"
 export const TIMEZONE_LABELS_CHANGED = "timezone-labels-changed"
 export const WEATHER_SETTINGS_CHANGED = "weather-settings-changed"
+// Local-only calendar customizations (kept in localStorage) that the main
+// window's sidebar/views must reflect when edited from the Settings window.
+export const ACCOUNT_NAME_OVERRIDES_CHANGED = "account-name-overrides-changed"
+export const CALENDAR_COLOR_OVERRIDES_CHANGED = "calendar-color-overrides-changed"
