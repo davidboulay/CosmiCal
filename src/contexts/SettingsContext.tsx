@@ -10,6 +10,7 @@ import {
   DEFAULT_REMINDERS_CHANGED,
   EXTRA_TIMEZONES_CHANGED,
   NOTIFICATIONS_ENABLED_CHANGED,
+  START_AT_LOGIN_CHANGED,
   TIMEZONE_LABELS_CHANGED,
   TIME_FORMAT_CHANGED,
   WEATHER_SETTINGS_CHANGED,
@@ -110,6 +111,8 @@ interface SettingsContextType {
   setNotificationsEnabled: (enabled: boolean) => Promise<void>
   autoSyncEnabled: boolean
   setAutoSyncEnabled: (enabled: boolean) => Promise<void>
+  startAtLogin: boolean
+  setStartAtLogin: (enabled: boolean) => Promise<void>
   extraTimezones: string[]
   setExtraTimezones: (zones: string[]) => Promise<void>
   timezoneLabels: Record<string, string>
@@ -142,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [calendarDir, setCalendarDirState] = useState<string>("")
   const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(true)
   const [autoSyncEnabled, setAutoSyncEnabledState] = useState<boolean>(true)
+  const [startAtLogin, setStartAtLoginState] = useState<boolean>(false)
   const [extraTimezones, setExtraTimezonesState] = useState<string[]>(loadExtraTimezones)
   const [timezoneLabels, setTimezoneLabelsState] =
     useState<Record<string, string>>(loadTimezoneLabels)
@@ -154,13 +158,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const reloadSettings = useCallback(async () => {
     try {
-      const [tf, reminders, cal, dir, notifs, autoSync] = await Promise.all([
+      const [tf, reminders, cal, dir, notifs, autoSync, startLogin] = await Promise.all([
         rpc.caldir.get_time_format(),
         rpc.caldir.get_default_reminders(),
         rpc.caldir.get_default_calendar(),
         rpc.caldir.get_calendar_dir(),
         rpc.config.get_notifications_enabled(),
         rpc.config.get_auto_sync_enabled(),
+        rpc.config.get_start_at_login(),
       ])
       setTimeFormatState(tf)
       setDefaultRemindersState(reminders)
@@ -168,6 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setCalendarDirState(dir)
       setNotificationsEnabledState(notifs)
       setAutoSyncEnabledState(autoSync)
+      setStartAtLoginState(startLogin)
       setSettingsLoaded(true)
     } catch (e) {
       console.error(e)
@@ -194,6 +200,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     })
     const unlistenAutoSync = listen<boolean>(AUTO_SYNC_ENABLED_CHANGED, (event) => {
       setAutoSyncEnabledState(event.payload)
+    })
+    const unlistenStartAtLogin = listen<boolean>(START_AT_LOGIN_CHANGED, (event) => {
+      setStartAtLoginState(event.payload)
     })
     const unlistenExtraTimezones = listen<string[]>(EXTRA_TIMEZONES_CHANGED, (event) => {
       setExtraTimezonesState(event.payload)
@@ -223,6 +232,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       unlistenCalendarDir.then((fn) => fn())
       unlistenNotifications.then((fn) => fn())
       unlistenAutoSync.then((fn) => fn())
+      unlistenStartAtLogin.then((fn) => fn())
       unlistenExtraTimezones.then((fn) => fn())
       unlistenTzLabels.then((fn) => fn())
       unlistenWeather.then((fn) => fn())
@@ -266,6 +276,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAutoSyncEnabledState(enabled)
     await rpc.config.set_auto_sync_enabled(enabled)
     await emit(AUTO_SYNC_ENABLED_CHANGED, enabled)
+  }
+
+  const setStartAtLogin = async (enabled: boolean) => {
+    setStartAtLoginState(enabled)
+    try {
+      await rpc.config.set_start_at_login(enabled)
+    } catch (e) {
+      console.error(e)
+    }
+    // Reflect the real autostart-entry state in case enable/disable failed.
+    const actual = await rpc.config.get_start_at_login()
+    setStartAtLoginState(actual)
+    await emit(START_AT_LOGIN_CHANGED, actual)
   }
 
   const setExtraTimezones = async (zones: string[]) => {
@@ -334,6 +357,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setNotificationsEnabled,
         autoSyncEnabled,
         setAutoSyncEnabled,
+        startAtLogin,
+        setStartAtLogin,
         extraTimezones,
         setExtraTimezones,
         timezoneLabels,

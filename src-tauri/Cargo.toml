@@ -3,7 +3,7 @@ members = ["reminder-core", "notifierd", "rencal-config"]
 
 [package]
 name = "rencal"
-version = "0.2.0"
+version = "0.2.1"
 description = "A calendar for hackers"
 authors = ["you"]
 edition = "2024"
@@ -29,6 +29,7 @@ tauri = { version = "2", features = ["tray-icon"] }
 tiny-skia = "0.11"
 ab_glyph = "0.2"
 tauri-plugin-opener = "2"
+tauri-plugin-autostart = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 taurpc = "0.5.2"

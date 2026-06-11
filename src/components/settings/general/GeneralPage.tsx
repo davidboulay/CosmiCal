@@ -24,6 +24,32 @@ export function GeneralPage() {
       <AllDayVisibleSection />
       <DataDirectorySection />
       <AutoSyncSection />
+      <StartAtLoginSection />
+    </div>
+  )
+}
+
+const StartAtLoginSection = () => {
+  const { startAtLogin, setStartAtLogin } = useSettings()
+  const id = useId()
+
+  return (
+    <div className="flex flex-col gap-2 w-[400px]">
+      <div className="flex items-center gap-3">
+        <Checkbox
+          id={id}
+          checked={startAtLogin}
+          onCheckedChange={(checked) => void setStartAtLogin(checked === true)}
+          className="cursor-pointer"
+        />
+        <Label htmlFor={id} className="cursor-pointer text-sm">
+          Start at login
+        </Label>
+      </div>
+      <p className="text-xs text-muted-foreground pl-7">
+        Launch CosmiCal automatically when you log in, so reminders and the tray icon are ready in
+        the background.
+      </p>
     </div>
   )
 }

@@ -1,4 +1,6 @@
 use rencal_config::RencalConfig;
+use tauri::{AppHandle, Runtime};
+use tauri_plugin_autostart::ManagerExt;
 
 use crate::routes::TauResult;
 
@@ -13,6 +15,11 @@ pub trait ConfigApi {
     async fn set_notifications_enabled(enabled: bool) -> TauResult<()>;
     async fn get_auto_sync_enabled() -> TauResult<bool>;
     async fn set_auto_sync_enabled(enabled: bool) -> TauResult<()>;
+    async fn get_start_at_login<R: Runtime>(app_handle: AppHandle<R>) -> TauResult<bool>;
+    async fn set_start_at_login<R: Runtime>(
+        app_handle: AppHandle<R>,
+        enabled: bool,
+    ) -> TauResult<()>;
 }
 
 #[derive(Clone)]
@@ -51,5 +58,28 @@ impl ConfigApi for ConfigApiImpl {
         let mut config = RencalConfig::load();
         config.auto_sync_enabled = enabled;
         config.save()
+    }
+
+    // Start-at-login is backed by the OS autostart entry itself (on Linux, an
+    // XDG `~/.config/autostart/*.desktop` file), so its presence is the source
+    // of truth — no separate value is stored in the TOML config.
+    async fn get_start_at_login<R: Runtime>(self, app_handle: AppHandle<R>) -> TauResult<bool> {
+        app_handle
+            .autolaunch()
+            .is_enabled()
+            .map_err(|e| e.to_string())
+    }
+
+    async fn set_start_at_login<R: Runtime>(
+        self,
+        app_handle: AppHandle<R>,
+        enabled: bool,
+    ) -> TauResult<()> {
+        let manager = app_handle.autolaunch();
+        if enabled {
+            manager.enable().map_err(|e| e.to_string())
+        } else {
+            manager.disable().map_err(|e| e.to_string())
+        }
     }
 }
