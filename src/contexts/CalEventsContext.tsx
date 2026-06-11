@@ -36,6 +36,19 @@ function sameEventList(a: CalendarEvent[], b: CalendarEvent[]): boolean {
   return true
 }
 
+// An optimistic (pending) event is considered "resolved" once a real synced
+// event with the same calendar/summary/start shows up — at which point we drop
+// the placeholder and let the real one (which carries the proper id, conference
+// link, etc.) take over.
+function pendingResolvedBy(real: CalendarEvent, pending: CalendarEvent): boolean {
+  return (
+    real.id !== pending.id &&
+    real.calendar_slug === pending.calendar_slug &&
+    (real.summary ?? "") === (pending.summary ?? "") &&
+    real.dateInfo.startMs === pending.dateInfo.startMs
+  )
+}
+
 interface CalEventsContextType {
   calendarEvents: CalendarEvent[]
   setCalendarEvents: Dispatch<SetStateAction<CalendarEvent[]>>
@@ -45,6 +58,11 @@ interface CalEventsContextType {
   toggleActiveEventKey: (key: string) => void
   isInitialLoading: boolean
   reloadEvents: () => Promise<void>
+  /** Show an event immediately and keep it across reloads until a matching
+   * synced event arrives (then it's dropped automatically). */
+  addOptimisticEvent: (event: CalendarEvent) => void
+  /** Remove a pending optimistic event (e.g. on create failure). */
+  resolveOptimisticEvent: (id: string) => void
 }
 
 const CalEventsContext = createContext({} as CalEventsContextType)
@@ -94,6 +112,21 @@ export function CalEventsProvider({
   //       currentDateRangeRef.current during the await. The resolve then replaces the merged
   //       (extended) state with events for the *old* range, removing the prepended/appended
   //       events. The user sees the EventList drift as the prepend-shift effect reacts.
+  // Optimistic events awaiting their real synced counterpart. Re-merged into
+  // every reload so intermediate reloads (mid-sync CALDIR_CHANGED, focus, range
+  // changes) never make a just-created event flicker out of existence.
+  const pendingEventsRef = useRef<CalendarEvent[]>([])
+
+  const addOptimisticEvent = useCallback((event: CalendarEvent) => {
+    pendingEventsRef.current = [...pendingEventsRef.current, event]
+    setCalendarEvents((prev) => [...prev, event])
+  }, [])
+
+  const resolveOptimisticEvent = useCallback((id: string) => {
+    pendingEventsRef.current = pendingEventsRef.current.filter((e) => e.id !== id)
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id))
+  }, [])
+
   const isReloadingRef = useRef(false)
   const reloadPendingRef = useRef(false)
   const reloadEvents = useEffectEvent(async () => {
@@ -121,7 +154,23 @@ export function CalEventsProvider({
           latest.end.getTime() !== range.end.getTime()
         if (rangeChanged) continue
 
-        setCalendarEvents((prev) => (sameEventList(prev, events) ? prev : events))
+        // Re-merge any still-unresolved optimistic events: drop the ones the
+        // backend now returns (matched by calendar/summary/start), and keep
+        // showing the rest if they fall in the current range.
+        const pending = pendingEventsRef.current
+        if (pending.length) {
+          const stillPending = pending.filter((p) => !events.some((e) => pendingResolvedBy(e, p)))
+          pendingEventsRef.current = stillPending
+          const inRange = stillPending.filter(
+            (p) =>
+              p.dateInfo.startMs >= range.start.getTime() &&
+              p.dateInfo.startMs <= range.end.getTime(),
+          )
+          const finalEvents = inRange.length ? [...events, ...inRange] : events
+          setCalendarEvents((prev) => (sameEventList(prev, finalEvents) ? prev : finalEvents))
+        } else {
+          setCalendarEvents((prev) => (sameEventList(prev, events) ? prev : events))
+        }
 
         if (!reloadPendingRef.current) break
       }
@@ -165,8 +214,18 @@ export function CalEventsProvider({
       toggleActiveEventKey,
       isInitialLoading,
       reloadEvents: reloadEventsStable,
+      addOptimisticEvent,
+      resolveOptimisticEvent,
     }),
-    [calendarEvents, activeEvent, toggleActiveEventKey, isInitialLoading, reloadEventsStable],
+    [
+      calendarEvents,
+      activeEvent,
+      toggleActiveEventKey,
+      isInitialLoading,
+      reloadEventsStable,
+      addOptimisticEvent,
+      resolveOptimisticEvent,
+    ],
   )
 
   return <CalEventsContext.Provider value={value}>{children}</CalEventsContext.Provider>

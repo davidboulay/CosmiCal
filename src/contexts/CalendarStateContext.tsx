@@ -27,6 +27,23 @@ interface CalendarsContextType {
   /** Slugs of calendars the user has hidden from the views. */
   hiddenCalendarSlugs: Set<string>
   toggleCalendarVisibility: (slug: string) => void
+  /** Slug of the calendar currently isolated (only it visible), or null. */
+  isolatedSlug: string | null
+  /**
+   * Toggle "isolate" for a calendar: when turned on, only that calendar is
+   * shown and all others hidden; when turned off, the prior visibility set is
+   * restored.
+   */
+  toggleIsolate: (slug: string) => void
+  /** Local color overrides keyed by calendar slug (persisted, applied on top
+   * of the server-provided color). */
+  calendarColorOverrides: Record<string, string>
+  setCalendarColor: (slug: string, color: string) => void
+  resetCalendarColor: (slug: string) => void
+  /** Local display-name overrides for accounts, keyed by account identifier. */
+  accountNameOverrides: Record<string, string>
+  setAccountName: (account: string, name: string) => void
+  resetAccountName: (account: string) => void
 }
 
 const CalendarsContext = createContext({} as CalendarsContextType)
@@ -45,6 +62,9 @@ interface CalendarNavigationContextType {
   /** Registered by the week view; scrolls the time grid to the current hour. */
   registerScrollToNow: (fn: (() => void) | null) => void
   scrollToNow: () => void
+  /** Whether the current-time line is within the time grid's viewport (week/3-Day). */
+  nowLineVisible: boolean
+  setNowLineVisible: (visible: boolean) => void
   isNavigating: () => boolean
   setIsNavigating: (value: boolean) => void
 }
@@ -76,13 +96,77 @@ export function CalendarStateProvider({
   initialDate,
 }: CalendarStateProviderProps) {
   const [activeDate, setActiveDate] = useState<Date>(() => initialDate ?? new Date())
-  const [calendars, setCalendars] = useState<Calendar[]>(() => initialCalendars ?? [])
+  const [baseCalendars, setBaseCalendars] = useState<Calendar[]>(() => initialCalendars ?? [])
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(() => initialCalendars === undefined)
+
+  // Local, user-set color overrides applied on top of the server color.
+  const [calendarColorOverrides, setColorOverrides] = useLocalStorage(
+    "calendarColorOverrides",
+    z.record(z.string(), z.string()),
+    {} as Record<string, string>,
+  )
+  const calendars = useMemo(
+    () =>
+      baseCalendars.map((c) =>
+        calendarColorOverrides[c.slug] ? { ...c, color: calendarColorOverrides[c.slug] } : c,
+      ),
+    [baseCalendars, calendarColorOverrides],
+  )
+
+  const setCalendarColor = useCallback(
+    (slug: string, color: string) => {
+      setColorOverrides({ ...calendarColorOverrides, [slug]: color })
+    },
+    [calendarColorOverrides, setColorOverrides],
+  )
+  const resetCalendarColor = useCallback(
+    (slug: string) => {
+      const next = { ...calendarColorOverrides }
+      delete next[slug]
+      setColorOverrides(next)
+    },
+    [calendarColorOverrides, setColorOverrides],
+  )
+
+  // Local, user-set display names for accounts (keyed by account identifier).
+  const [accountNameOverrides, setAccountNameOverrides] = useLocalStorage(
+    "accountNameOverrides",
+    z.record(z.string(), z.string()),
+    {} as Record<string, string>,
+  )
+  const setAccountName = useCallback(
+    (account: string, name: string) => {
+      const next = { ...accountNameOverrides }
+      const trimmed = name.trim()
+      if (trimmed) next[account] = trimmed
+      else delete next[account]
+      setAccountNameOverrides(next)
+    },
+    [accountNameOverrides, setAccountNameOverrides],
+  )
+  const resetAccountName = useCallback(
+    (account: string) => {
+      const next = { ...accountNameOverrides }
+      delete next[account]
+      setAccountNameOverrides(next)
+    },
+    [accountNameOverrides, setAccountNameOverrides],
+  )
 
   const [hiddenSlugs, setHiddenSlugs] = useLocalStorage("hiddenCalendars", z.array(z.string()), [])
   const hiddenCalendarSlugs = useMemo(() => new Set(hiddenSlugs), [hiddenSlugs])
+
+  // Isolate state: when set, `isolatedSlug` is the only visible calendar. We
+  // remember the hidden set from just before isolating so we can restore it
+  // exactly when isolation is turned off.
+  const [isolatedSlug, setIsolatedSlug] = useState<string | null>(null)
+  const preIsolateHiddenRef = useRef<string[] | null>(null)
+
   const toggleCalendarVisibility = useCallback(
     (slug: string) => {
+      // Manually toggling visibility breaks the isolate snapshot, so drop it.
+      setIsolatedSlug(null)
+      preIsolateHiddenRef.current = null
       setHiddenSlugs(
         hiddenCalendarSlugs.has(slug)
           ? hiddenSlugs.filter((s) => s !== slug)
@@ -92,8 +176,30 @@ export function CalendarStateProvider({
     [hiddenSlugs, hiddenCalendarSlugs, setHiddenSlugs],
   )
 
+  const toggleIsolate = useCallback(
+    (slug: string) => {
+      if (isolatedSlug === slug) {
+        // Turning isolate off: restore the prior hidden set exactly.
+        setHiddenSlugs(preIsolateHiddenRef.current ?? [])
+        preIsolateHiddenRef.current = null
+        setIsolatedSlug(null)
+      } else {
+        // Turning isolate on (or switching the isolated calendar): remember the
+        // hidden set only the first time we enter isolation so we can revert to
+        // the user's real choices, not a previously-isolated state.
+        if (isolatedSlug === null) {
+          preIsolateHiddenRef.current = hiddenSlugs
+        }
+        setHiddenSlugs(calendars.map((c) => c.slug).filter((s) => s !== slug))
+        setIsolatedSlug(slug)
+      }
+    },
+    [isolatedSlug, hiddenSlugs, calendars, setHiddenSlugs],
+  )
+
   const scrollToDateRef = useRef<((date: Date, behavior?: ScrollBehavior) => void) | null>(null)
   const scrollToNowRef = useRef<(() => void) | null>(null)
+  const [nowLineVisible, setNowLineVisible] = useState(false)
   const loadEventsForDateRef = useRef<((date: Date) => Promise<void>) | null>(null)
   const isNavigatingRef = useRef(true)
   const navigationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,7 +208,7 @@ export function CalendarStateProvider({
     try {
       const result = await rpc.caldir.list_calendars()
       logger.debug("Calendars loaded from store:", result.length)
-      setCalendars(result)
+      setBaseCalendars(result)
     } finally {
       setIsLoadingCalendars(false)
     }
@@ -186,8 +292,29 @@ export function CalendarStateProvider({
       reloadCalendars: loadCalendarsFromStore,
       hiddenCalendarSlugs,
       toggleCalendarVisibility,
+      isolatedSlug,
+      toggleIsolate,
+      calendarColorOverrides,
+      setCalendarColor,
+      resetCalendarColor,
+      accountNameOverrides,
+      setAccountName,
+      resetAccountName,
     }),
-    [calendars, isLoadingCalendars, hiddenCalendarSlugs, toggleCalendarVisibility],
+    [
+      calendars,
+      isLoadingCalendars,
+      hiddenCalendarSlugs,
+      toggleCalendarVisibility,
+      isolatedSlug,
+      toggleIsolate,
+      calendarColorOverrides,
+      setCalendarColor,
+      resetCalendarColor,
+      accountNameOverrides,
+      setAccountName,
+      resetAccountName,
+    ],
   )
 
   const navigationValue = useMemo(
@@ -198,10 +325,12 @@ export function CalendarStateProvider({
       registerScrollToDate,
       registerScrollToNow,
       scrollToNow,
+      nowLineVisible,
+      setNowLineVisible,
       isNavigating,
       setIsNavigating,
     }),
-    [activeDate],
+    [activeDate, nowLineVisible],
   )
 
   return (

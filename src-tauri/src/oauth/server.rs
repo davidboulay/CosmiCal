@@ -22,7 +22,7 @@ Connection: close
 </head>
 <body>
     <h1>Authentication Successful</h1>
-    <p>You can close this window and return to renCal.</p>
+    <p>You can close this window and return to CosmiCal.</p>
 </body>
 </html>
 "#;

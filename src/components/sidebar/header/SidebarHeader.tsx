@@ -19,12 +19,15 @@ export function SidebarHeader() {
 }
 
 function SidebarHeaderContent() {
-  const { isDrafting, setIsDrafting } = useEventDraft()
-  const { text } = useEventText()
+  const { isDrafting, setIsDrafting, setDefaultDraftEvent } = useEventDraft()
+  const { setText } = useEventText()
 
   const { cardRef, hideCard, onCollapsed, flyRef, isFlying, startFlight } = useFlyAnimation()
 
-  const showDraft = (isDrafting && text.length > 0) || isFlying
+  // Show the manual event form as soon as composing starts (from the + button
+  // or the "c" shortcut) — alongside the natural-language input — so the user
+  // can fill fields directly instead of only typing a phrase.
+  const showDraft = isDrafting || isFlying
 
   // Stay true briefly after showDraft flips false, so the card
   // remains mounted while the collapse animation plays.
@@ -58,6 +61,11 @@ function SidebarHeaderContent() {
               <ComposeEventInner
                 onBeforeCreate={startFlight}
                 onCreated={() => setIsDrafting(false)}
+                onCancel={() => {
+                  setIsDrafting(false)
+                  setText("")
+                  setDefaultDraftEvent()
+                }}
                 onTabOut={() => {
                   document.querySelector<HTMLInputElement>("[data-compose-event-input]")?.focus()
                 }}

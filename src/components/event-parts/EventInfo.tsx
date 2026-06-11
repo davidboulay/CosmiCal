@@ -3,6 +3,7 @@ import { RRule, RRuleSet } from "rrule"
 import { AllDayCheckbox } from "@/components/event-parts/inputs/AllDayCheckbox"
 import { AttendeesDisplay } from "@/components/event-parts/inputs/AttendeesDisplay"
 import { CalendarSelect } from "@/components/event-parts/inputs/CalendarSelect"
+import { ConferenceInput } from "@/components/event-parts/inputs/ConferenceInput"
 import { ConferenceLink } from "@/components/event-parts/inputs/ConferenceLink"
 import { DateTimeSelect, type DateTimeRange } from "@/components/event-parts/inputs/DateTimeSelect"
 import { LocationInput } from "@/components/event-parts/inputs/LocationInput"
@@ -19,7 +20,6 @@ import { cn } from "@/lib/utils"
 
 import { NotesInput } from "./inputs/NotesInput"
 import { RsvpBar } from "./inputs/RsvpBar"
-import { RsvpSelect } from "./inputs/RsvpSelect"
 
 const Divider = () => (
   <div className="my-2 opacity-75">
@@ -71,6 +71,10 @@ export function EventInfo({
   attendees,
   onAttendeesChange,
   conferenceUrl,
+  onConferenceUrlChange,
+  createGoogleMeet,
+  onCreateGoogleMeetChange,
+  canCreateMeet,
   reminders,
   onReminderAdd,
   onReminderRemove,
@@ -102,6 +106,11 @@ export function EventInfo({
   attendees?: EventAttendee[]
   onAttendeesChange?: (attendees: EventAttendee[]) => void
   conferenceUrl?: string | null
+  onConferenceUrlChange?: (url: string) => void
+  createGoogleMeet?: boolean
+  onCreateGoogleMeetChange?: (create: boolean) => void
+  /** True when the selected calendar can auto-create a Meet (Google + connected). */
+  canCreateMeet?: boolean
   reminders?: number[]
   onReminderAdd: (mins: number) => void
   onReminderRemove: (mins: number) => void
@@ -152,7 +161,19 @@ export function EventInfo({
 
         <RepeatSelect value={recurrence} onChange={onRecurrenceChange} readOnly={readonly} />
 
-        {conferenceUrl && <ConferenceLink url={conferenceUrl} />}
+        {readonly
+          ? conferenceUrl && <ConferenceLink url={conferenceUrl} />
+          : onConferenceUrlChange && (
+              <ConferenceInput
+                value={conferenceUrl}
+                onChange={onConferenceUrlChange}
+                onClose={onClose}
+                readOnly={readonly}
+                createGoogleMeet={createGoogleMeet}
+                onCreateGoogleMeetChange={onCreateGoogleMeetChange}
+                canCreateMeet={canCreateMeet}
+              />
+            )}
 
         {(!!attendees?.length || !readonly) && (
           <>
@@ -185,11 +206,10 @@ export function EventInfo({
           <>
             <Divider />
 
-            {isPendingInvite ? (
-              <RsvpBar onRsvp={onRsvp} />
-            ) : (
-              <RsvpSelect status={userResponseStatus} onRsvp={onRsvp} />
-            )}
+            <div className="px-3 pt-1 text-xs font-medium text-muted-foreground">
+              {isPendingInvite ? "Respond to invitation" : "My response"}
+            </div>
+            <RsvpBar status={userResponseStatus} onRsvp={onRsvp} />
           </>
         )}
       </div>

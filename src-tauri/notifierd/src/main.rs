@@ -31,10 +31,13 @@ fn icon_path() -> Option<PathBuf> {
     }
 
     let mut candidates: Vec<PathBuf> = vec![
+        PathBuf::from("/usr/share/icons/hicolor/128x128/apps/CosmiCal.png"),
+        PathBuf::from("/usr/share/icons/hicolor/128x128/apps/cosmical.png"),
         PathBuf::from("/usr/share/icons/hicolor/128x128/apps/rencal.png"),
         PathBuf::from("/usr/share/icons/hicolor/128x128/apps/org.ren.rencal.png"),
     ];
     if let Some(data) = dirs::data_dir() {
+        candidates.push(data.join("icons/hicolor/128x128/apps/CosmiCal.png"));
         candidates.push(data.join("icons/hicolor/128x128/apps/rencal.png"));
     }
 

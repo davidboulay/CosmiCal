@@ -1,4 +1,4 @@
-use super::helpers::load_caldir;
+use super::helpers::{calendar_self_email, load_caldir};
 use crate::event_cache::EVENT_CACHE;
 use crate::routes::TauResult;
 use caldir_core::{EventInstanceId, ParticipationStatus};
@@ -11,10 +11,8 @@ pub(super) async fn handler(
     let caldir = load_caldir()?;
     let calendar = caldir.calendar(&calendar_slug).map_err(|e| e.to_string())?;
 
-    let user_email = calendar
-        .remote_email()
-        .ok_or_else(|| "Calendar has no account email".to_string())?
-        .to_string();
+    let user_email = calendar_self_email(&calendar)
+        .ok_or_else(|| "Calendar has no account email".to_string())?;
 
     let instance_id = EventInstanceId::from(event_id.as_str());
     let status = parse_participation_status(&response)?;

@@ -1,5 +1,7 @@
 use super::helpers::load_caldir;
-use super::types::{UpdateEventInput, rpc_recurrence_to_core, rpc_time_to_core};
+use super::types::{
+    UpdateEventInput, rpc_recurrence_to_core, rpc_time_to_core, set_conference_url,
+};
 use crate::event_cache::EVENT_CACHE;
 use crate::routes::TauResult;
 use caldir_core::{Attendee, EventInstanceId, Reminder};
@@ -48,6 +50,7 @@ pub(super) async fn handler(input: UpdateEventInput) -> TauResult<()> {
                 event.end = Some(end);
                 event.reminders = input_reminders;
                 event.attendees = input_attendees;
+                set_conference_url(event, input.conference_url.as_deref());
             })
             .map_err(|e| e.to_string())?;
 
@@ -78,6 +81,7 @@ pub(super) async fn handler(input: UpdateEventInput) -> TauResult<()> {
         updated_event.attendees = input_attendees;
         updated_event.last_modified = Some(Utc::now());
         updated_event.sequence += 1;
+        set_conference_url(&mut updated_event, input.conference_url.as_deref());
 
         if moving {
             let new_slug = input.new_calendar_slug.as_ref().unwrap();

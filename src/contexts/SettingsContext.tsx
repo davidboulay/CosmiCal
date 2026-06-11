@@ -57,12 +57,44 @@ function loadTimezoneLabels(): Record<string, string> {
 // persisted in localStorage and synced across windows like the timezones.
 const WEATHER_ENABLED_KEY = "weatherEnabled"
 const WEATHER_LOCATION_KEY = "weatherLocation"
+const WEATHER_UNIT_KEY = "weatherUnit"
+
+export type WeatherUnit = "celsius" | "fahrenheit"
 
 function loadWeatherEnabled(): boolean {
   return localStorage.getItem(WEATHER_ENABLED_KEY) !== "false"
 }
 function loadWeatherLocation(): string {
   return localStorage.getItem(WEATHER_LOCATION_KEY) ?? ""
+}
+function loadWeatherUnit(): WeatherUnit {
+  return localStorage.getItem(WEATHER_UNIT_KEY) === "fahrenheit" ? "fahrenheit" : "celsius"
+}
+
+// Auto update preference. Persisted in localStorage and synced across windows
+// via a cross-window event, mirroring the weather/timezone pattern.
+const AUTO_UPDATE_KEY = "autoUpdate"
+const AUTO_UPDATE_ENABLED_CHANGED = "auto-update-enabled-changed"
+
+function loadAutoUpdate(): boolean {
+  return localStorage.getItem(AUTO_UPDATE_KEY) !== "false"
+}
+
+// How many all-day event lanes are shown in the week view before the region
+// collapses behind an expand toggle. 1–10, default 3.
+const ALL_DAY_VISIBLE_KEY = "allDayVisibleCount"
+const ALL_DAY_VISIBLE_CHANGED = "all-day-visible-count-changed"
+export const ALL_DAY_VISIBLE_MIN = 1
+export const ALL_DAY_VISIBLE_MAX = 10
+export const ALL_DAY_VISIBLE_DEFAULT = 3
+
+function clampAllDayVisible(n: number): number {
+  if (!Number.isFinite(n)) return ALL_DAY_VISIBLE_DEFAULT
+  return Math.max(ALL_DAY_VISIBLE_MIN, Math.min(ALL_DAY_VISIBLE_MAX, Math.round(n)))
+}
+function loadAllDayVisibleCount(): number {
+  const raw = localStorage.getItem(ALL_DAY_VISIBLE_KEY)
+  return raw === null ? ALL_DAY_VISIBLE_DEFAULT : clampAllDayVisible(Number(raw))
 }
 
 interface SettingsContextType {
@@ -86,6 +118,12 @@ interface SettingsContextType {
   setWeatherEnabled: (enabled: boolean) => Promise<void>
   weatherLocation: string
   setWeatherLocation: (location: string) => Promise<void>
+  weatherUnit: WeatherUnit
+  setWeatherUnit: (unit: WeatherUnit) => Promise<void>
+  autoUpdate: boolean
+  setAutoUpdate: (enabled: boolean) => Promise<void>
+  allDayVisibleCount: number
+  setAllDayVisibleCount: (count: number) => Promise<void>
   reloadSettings: () => Promise<void>
   // False until persisted settings load, so startup consumers don't act on defaults.
   settingsLoaded: boolean
@@ -109,6 +147,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     useState<Record<string, string>>(loadTimezoneLabels)
   const [weatherEnabled, setWeatherEnabledState] = useState<boolean>(loadWeatherEnabled)
   const [weatherLocation, setWeatherLocationState] = useState<string>(loadWeatherLocation)
+  const [weatherUnit, setWeatherUnitState] = useState<WeatherUnit>(loadWeatherUnit)
+  const [autoUpdate, setAutoUpdateState] = useState<boolean>(loadAutoUpdate)
+  const [allDayVisibleCount, setAllDayVisibleCountState] = useState<number>(loadAllDayVisibleCount)
   const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false)
 
   const reloadSettings = useCallback(async () => {
@@ -160,13 +201,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const unlistenTzLabels = listen<Record<string, string>>(TIMEZONE_LABELS_CHANGED, (event) => {
       setTimezoneLabelsState(event.payload)
     })
-    const unlistenWeather = listen<{ enabled: boolean; location: string }>(
+    const unlistenWeather = listen<{ enabled: boolean; location: string; unit: WeatherUnit }>(
       WEATHER_SETTINGS_CHANGED,
       (event) => {
         setWeatherEnabledState(event.payload.enabled)
         setWeatherLocationState(event.payload.location)
+        setWeatherUnitState(event.payload.unit)
       },
     )
+    const unlistenAutoUpdate = listen<boolean>(AUTO_UPDATE_ENABLED_CHANGED, (event) => {
+      setAutoUpdateState(event.payload)
+    })
+    const unlistenAllDayVisible = listen<number>(ALL_DAY_VISIBLE_CHANGED, (event) => {
+      setAllDayVisibleCountState(clampAllDayVisible(event.payload))
+    })
 
     return () => {
       unlistenTimeFormat.then((fn) => fn())
@@ -178,6 +226,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       unlistenExtraTimezones.then((fn) => fn())
       unlistenTzLabels.then((fn) => fn())
       unlistenWeather.then((fn) => fn())
+      unlistenAutoUpdate.then((fn) => fn())
+      unlistenAllDayVisible.then((fn) => fn())
     }
   }, [reloadSettings])
 
@@ -235,19 +285,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     await emit(TIMEZONE_LABELS_CHANGED, next)
   }
 
-  const emitWeather = (enabled: boolean, location: string) =>
-    emit(WEATHER_SETTINGS_CHANGED, { enabled, location })
+  const emitWeather = (enabled: boolean, location: string, unit: WeatherUnit) =>
+    emit(WEATHER_SETTINGS_CHANGED, { enabled, location, unit })
 
   const setWeatherEnabled = async (enabled: boolean) => {
     setWeatherEnabledState(enabled)
     localStorage.setItem(WEATHER_ENABLED_KEY, String(enabled))
-    await emitWeather(enabled, weatherLocation)
+    await emitWeather(enabled, weatherLocation, weatherUnit)
   }
 
   const setWeatherLocation = async (location: string) => {
     setWeatherLocationState(location)
     localStorage.setItem(WEATHER_LOCATION_KEY, location)
-    await emitWeather(weatherEnabled, location)
+    await emitWeather(weatherEnabled, location, weatherUnit)
+  }
+
+  const setWeatherUnit = async (unit: WeatherUnit) => {
+    setWeatherUnitState(unit)
+    localStorage.setItem(WEATHER_UNIT_KEY, unit)
+    await emitWeather(weatherEnabled, weatherLocation, unit)
+  }
+
+  const setAutoUpdate = async (enabled: boolean) => {
+    setAutoUpdateState(enabled)
+    localStorage.setItem(AUTO_UPDATE_KEY, String(enabled))
+    await emit(AUTO_UPDATE_ENABLED_CHANGED, enabled)
+  }
+
+  const setAllDayVisibleCount = async (count: number) => {
+    const next = clampAllDayVisible(count)
+    setAllDayVisibleCountState(next)
+    localStorage.setItem(ALL_DAY_VISIBLE_KEY, String(next))
+    await emit(ALL_DAY_VISIBLE_CHANGED, next)
   }
 
   return (
@@ -273,6 +342,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWeatherEnabled,
         weatherLocation,
         setWeatherLocation,
+        weatherUnit,
+        setWeatherUnit,
+        autoUpdate,
+        setAutoUpdate,
+        allDayVisibleCount,
+        setAllDayVisibleCount,
         reloadSettings,
         settingsLoaded,
       }}

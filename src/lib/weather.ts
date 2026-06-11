@@ -9,6 +9,9 @@ export type DailyWeather = {
   code: number // WMO weather code
 }
 
+/** Temperature unit for the forecast. Defaults to Celsius (Open-Meteo's default). */
+export type WeatherUnit = "celsius" | "fahrenheit"
+
 export type Located = {
   lat: number
   lon: number
@@ -71,10 +74,11 @@ export async function resolveWeatherLocation(manual: string): Promise<Located | 
   return null
 }
 
-async function fetchForecast(lat: number, lon: number): Promise<DailyWeather[]> {
+async function fetchForecast(lat: number, lon: number, unit: WeatherUnit): Promise<DailyWeather[]> {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16`
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16` +
+    (unit === "fahrenheit" ? "&temperature_unit=fahrenheit" : "")
   const r = await fetch(url)
   const j = await r.json()
   const d = j?.daily
@@ -96,14 +100,18 @@ export function clearWeatherCache() {
   cache = null
 }
 
-export async function getForecast(manualLocation: string): Promise<DailyWeather[]> {
-  const key = manualLocation.trim()
+export async function getForecast(
+  manualLocation: string,
+  unit: WeatherUnit = "celsius",
+): Promise<DailyWeather[]> {
+  // Key by location AND unit so toggling C/F refetches in the right unit.
+  const key = `${unit}:${manualLocation.trim()}`
   const now = Date.now()
   if (cache && cache.key === key && now - cache.ts < CACHE_MS) return cache.data
 
-  const loc = await resolveWeatherLocation(key)
+  const loc = await resolveWeatherLocation(manualLocation.trim())
   if (!loc) return []
-  const data = await fetchForecast(loc.lat, loc.lon)
+  const data = await fetchForecast(loc.lat, loc.lon, unit)
   cache = { key, ts: now, data }
   return data
 }

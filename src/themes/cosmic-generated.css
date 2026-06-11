@@ -1,0 +1,1729 @@
+/* AUTO-GENERATED from COSMIC .ron themes by scripts/gen-themes — do not edit by hand. */
+
+/* Black Pearl — generated from COSMIC theme "Black Pearl.ron" */
+[data-theme="black-pearl"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #080c12;
+  --foreground: #e1e2e3;
+  --muted: rgba(225, 226, 227, 0.55);
+
+  --primary: #e2e3e4;
+  --primary-foreground: #16161a;
+
+  --today: #e2e3e4;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2b2e33;
+  --border-button: #3e4146;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Catppuccin Latte Lavender — generated from COSMIC theme "Catppuccin Latte Lavender.ron" */
+[data-theme="catppuccin-latte-lavender"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #eff1f5;
+  --foreground: #1d1d1d;
+  --muted: rgba(29, 29, 29, 0.55);
+
+  --primary: #7287fd;
+  --primary-foreground: #16161a;
+
+  --today: #7287fd;
+  --highlight: #7287fd;
+
+  --success: #40a02b;
+  --warning: #df8e1d;
+  --error: #d20f39;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #cecfd3;
+  --border-button: #babcbf;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Catppuccin Macchiato Green — generated from COSMIC theme "Catppuccin Macchiato Green.ron" */
+[data-theme="catppuccin-macchiato-green"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #24273a;
+  --foreground: #e5e5e7;
+  --muted: rgba(229, 229, 231, 0.55);
+
+  --primary: #a6da95;
+  --primary-foreground: #16161a;
+
+  --today: #a6da95;
+  --highlight: #b7bdf8;
+
+  --success: #a6da95;
+  --warning: #eed49f;
+  --error: #ed8796;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #434556;
+  --border-button: #545765;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Catppuccin Macchiato Lavender — generated from COSMIC theme "Catppuccin Macchiato Lavender.ron" */
+[data-theme="catppuccin-macchiato-lavender"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #24273a;
+  --foreground: #e5e5e7;
+  --muted: rgba(229, 229, 231, 0.55);
+
+  --primary: #b7bdf8;
+  --primary-foreground: #16161a;
+
+  --today: #b7bdf8;
+  --highlight: #b7bdf8;
+
+  --success: #a6da95;
+  --warning: #eed49f;
+  --error: #ed8796;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #434556;
+  --border-button: #545765;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Catppuccin Mocha Sky — generated from COSMIC theme "Catppuccin Mocha Sky.ron" */
+[data-theme="catppuccin-mocha-sky"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1e1e2e;
+  --foreground: #e4e4e6;
+  --muted: rgba(228, 228, 230, 0.55);
+
+  --primary: #89dceb;
+  --primary-foreground: #16161a;
+
+  --today: #89dceb;
+  --highlight: #b4befe;
+
+  --success: #a6e3a1;
+  --warning: #f9e2af;
+  --error: #f38ba8;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3e3e4b;
+  --border-button: #50505c;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* COSMIC Aero — generated from COSMIC theme "COSMIC Aero.ron" */
+[data-theme="cosmic-aero"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #262b30;
+  --foreground: #e5e6e6;
+  --muted: rgba(229, 230, 230, 0.55);
+
+  --primary: #0099f6;
+  --primary-foreground: #f7f7f7;
+
+  --today: #0099f6;
+  --highlight: #7340d9;
+
+  --success: #57de57;
+  --warning: #d9bf00;
+  --error: #ed5252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #44494d;
+  --border-button: #565a5e;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Cosmic Cyberpunk Setting Theme — generated from COSMIC theme "cosmic_cyberpunk_setting_theme.ron" */
+[data-theme="cosmic-cyberpunk-setting-theme"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #000000;
+  --foreground: #e0e0e0;
+  --muted: rgba(224, 224, 224, 0.55);
+
+  --primary: #03d8f3;
+  --primary-foreground: #16161a;
+
+  --today: #03d8f3;
+  --highlight: #b7bdf8;
+
+  --success: #a6da95;
+  --warning: #eed49f;
+  --error: #ed8796;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #242424;
+  --border-button: #383838;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* CosmicWaita — generated from COSMIC theme "CosmicWaita.ron" */
+[data-theme="cosmicwaita"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #ffffff;
+  --foreground: #1f1f1f;
+  --muted: rgba(31, 31, 31, 0.55);
+
+  --primary: #00525a;
+  --primary-foreground: #f7f7f7;
+
+  --today: #00525a;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #dbdbdb;
+  --border-button: #c7c7c7;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Dark Liquid Glass — generated from COSMIC theme "Dark Liquid Glass.ron" */
+[data-theme="dark-liquid-glass"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #080c12;
+  --foreground: #e1e2e3;
+  --muted: rgba(225, 226, 227, 0.55);
+
+  --primary: #e2e3e4;
+  --primary-foreground: #16161a;
+
+  --today: #e2e3e4;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2b2e33;
+  --border-button: #3e4146;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Dracula Purple — generated from COSMIC theme "Dracula Purple.ron" */
+[data-theme="dracula-purple"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #282a36;
+  --foreground: #e5e5e7;
+  --muted: rgba(229, 229, 231, 0.55);
+
+  --primary: #bd93f9;
+  --primary-foreground: #16161a;
+
+  --today: #bd93f9;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #464852;
+  --border-button: #575962;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Dracula — generated from COSMIC theme "Dracula.ron" */
+[data-theme="dracula"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #282a36;
+  --foreground: #e5e5e7;
+  --muted: rgba(229, 229, 231, 0.55);
+
+  --primary: #6272a4;
+  --primary-foreground: #f7f7f7;
+
+  --today: #6272a4;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #464852;
+  --border-button: #575962;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Dusklight — generated from COSMIC theme "Dusklight.ron" */
+[data-theme="dusklight"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #070921;
+  --foreground: #e1e1e4;
+  --muted: rgba(225, 225, 228, 0.55);
+
+  --primary: #ff8000;
+  --primary-foreground: #16161a;
+
+  --today: #ff8000;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2a2b40;
+  --border-button: #3e3f52;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Eientei Dark Red — generated from COSMIC theme "Eientei Dark Red.ron" */
+[data-theme="eientei-dark-red"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1b1b1b;
+  --foreground: #e4e4e4;
+  --muted: rgba(228, 228, 228, 0.55);
+
+  --primary: #e30845;
+  --primary-foreground: #f7f7f7;
+
+  --today: #e30845;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3b3b3b;
+  --border-button: #4d4d4d;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Elysium — generated from COSMIC theme "Elysium.ron" */
+[data-theme="elysium"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1f2937;
+  --foreground: #e4e5e7;
+  --muted: rgba(228, 229, 231, 0.55);
+
+  --primary: #4caf50;
+  --primary-foreground: #f7f7f7;
+
+  --today: #4caf50;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3e4753;
+  --border-button: #505863;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Everforest Medium — generated from COSMIC theme "Everforest Medium.ron" */
+[data-theme="everforest-medium"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #2d353b;
+  --foreground: #e6e7e7;
+  --muted: rgba(230, 231, 231, 0.55);
+
+  --primary: #e69875;
+  --primary-foreground: #16161a;
+
+  --today: #e69875;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #4a5156;
+  --border-button: #5b6166;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* EverForest — generated from COSMIC theme "EverForest.ron" */
+[data-theme="everforest"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #272e33;
+  --foreground: #e5e6e7;
+  --muted: rgba(229, 230, 231, 0.55);
+
+  --primary: #89b482;
+  --primary-foreground: #16161a;
+
+  --today: #89b482;
+  --highlight: #b88dbb;
+
+  --success: #a7c080;
+  --warning: #dbbc7f;
+  --error: #e67e80;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #454b50;
+  --border-button: #575c60;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Fedora Light — generated from COSMIC theme "Fedora Light.ron" */
+[data-theme="fedora-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #edeff3;
+  --foreground: #1c1d1d;
+  --muted: rgba(28, 29, 29, 0.55);
+
+  --primary: #304677;
+  --primary-foreground: #f7f7f7;
+
+  --today: #304677;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #ccced1;
+  --border-button: #b9babe;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Flexoki Dark — generated from COSMIC theme "Flexoki Dark.ron" */
+[data-theme="flexoki-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #100f0f;
+  --foreground: #e2e2e2;
+  --muted: rgba(226, 226, 226, 0.55);
+
+  --primary: #3aa99f;
+  --primary-foreground: #f7f7f7;
+
+  --today: #3aa99f;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #313131;
+  --border-button: #454444;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* GNOME Adwaita Dark — generated from COSMIC theme "GNOME Adwaita Dark.ron" */
+[data-theme="gnome-adwaita-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1e1e1e;
+  --foreground: #e4e4e4;
+  --muted: rgba(228, 228, 228, 0.55);
+
+  --primary: #56a2ff;
+  --primary-foreground: #16161a;
+
+  --today: #56a2ff;
+  --highlight: #e79cfe;
+
+  --success: #92cf9c;
+  --warning: #f7e062;
+  --error: #fda1a0;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3e3e3e;
+  --border-button: #505050;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Gotham — generated from COSMIC theme "Gotham.ron" */
+[data-theme="gotham"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #0c1014;
+  --foreground: #e2e2e3;
+  --muted: rgba(226, 226, 227, 0.55);
+
+  --primary: #edb443;
+  --primary-foreground: #16161a;
+
+  --today: #edb443;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2e3135;
+  --border-button: #414548;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Gruvbox Dark — generated from COSMIC theme "Gruvbox Dark.ron" */
+[data-theme="gruvbox-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #282828;
+  --foreground: #e5e5e5;
+  --muted: rgba(229, 229, 229, 0.55);
+
+  --primary: #689d6a;
+  --primary-foreground: #f7f7f7;
+
+  --today: #689d6a;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #464646;
+  --border-button: #575757;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Gruvbox Light — generated from COSMIC theme "Gruvbox Light.ron" */
+[data-theme="gruvbox-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #fbf1c7;
+  --foreground: #1e1d18;
+  --muted: rgba(30, 29, 24, 0.55);
+
+  --primary: #458558;
+  --primary-foreground: #f7f7f7;
+
+  --today: #458558;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #d8cfab;
+  --border-button: #c4bc9b;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Gruvbox Material Dark — generated from COSMIC theme "Gruvbox Material Dark.ron" */
+[data-theme="gruvbox-material-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #282828;
+  --foreground: #e5e5e5;
+  --muted: rgba(229, 229, 229, 0.55);
+
+  --primary: #89b482;
+  --primary-foreground: #16161a;
+
+  --today: #89b482;
+  --highlight: #a790c6;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #464646;
+  --border-button: #575757;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Hacker's Green — generated from COSMIC theme "Hacker's Green.ron" */
+[data-theme="hacker-s-green"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #000000;
+  --foreground: #e0e0e0;
+  --muted: rgba(224, 224, 224, 0.55);
+
+  --primary: #11ff00;
+  --primary-foreground: #16161a;
+
+  --today: #11ff00;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #242424;
+  --border-button: #383838;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Hot Iron — generated from COSMIC theme "Hot Iron.ron" */
+[data-theme="hot-iron"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1f0c0c;
+  --foreground: #e4e2e2;
+  --muted: rgba(228, 226, 226, 0.55);
+
+  --primary: #ffa557;
+  --primary-foreground: #16161a;
+
+  --today: #ffa557;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3e2e2e;
+  --border-button: #504141;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* HP Dev One — generated from COSMIC theme "HP Dev One.ron" */
+[data-theme="hp-dev-one"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #000b11;
+  --foreground: #e0e2e2;
+  --muted: rgba(224, 226, 226, 0.55);
+
+  --primary: #4fcaff;
+  --primary-foreground: #16161a;
+
+  --today: #4fcaff;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #242d32;
+  --border-button: #384145;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Kanagawa — generated from COSMIC theme "Kanagawa.ron" */
+[data-theme="kanagawa"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #16161d;
+  --foreground: #e3e3e4;
+  --muted: rgba(227, 227, 228, 0.55);
+
+  --primary: #c8c093;
+  --primary-foreground: #16161a;
+
+  --today: #c8c093;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #37373d;
+  --border-button: #49494f;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Nature — generated from COSMIC theme "Nature.ron" */
+[data-theme="nature"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #071007;
+  --foreground: #e1e2e1;
+  --muted: rgba(225, 226, 225, 0.55);
+
+  --primary: #92cf9c;
+  --primary-foreground: #16161a;
+
+  --today: #92cf9c;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2a312a;
+  --border-button: #3e453e;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Nord Dark — generated from COSMIC theme "Nord Dark.ron" */
+[data-theme="nord-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #2e3440;
+  --foreground: #e6e7e8;
+  --muted: rgba(230, 231, 232, 0.55);
+
+  --primary: #88c0d0;
+  --primary-foreground: #16161a;
+
+  --today: #88c0d0;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #4b505b;
+  --border-button: #5c616a;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Nord Light — generated from COSMIC theme "Nord Light.ron" */
+[data-theme="nord-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #eceff4;
+  --foreground: #1c1d1d;
+  --muted: rgba(28, 29, 29, 0.55);
+
+  --primary: #5e81ac;
+  --primary-foreground: #f7f7f7;
+
+  --today: #5e81ac;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #cbced2;
+  --border-button: #b8babe;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Nordic Dark — generated from COSMIC theme "Nordic Dark.ron" */
+[data-theme="nordic-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #2e3440;
+  --foreground: #e6e7e8;
+  --muted: rgba(230, 231, 232, 0.55);
+
+  --primary: #6e9193;
+  --primary-foreground: #f7f7f7;
+
+  --today: #6e9193;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #4b505b;
+  --border-button: #5c616a;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Obsidian — generated from COSMIC theme "Obsidian.ron" */
+[data-theme="obsidian"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #130c1f;
+  --foreground: #e3e2e4;
+  --muted: rgba(227, 226, 228, 0.55);
+
+  --primary: #ffad00;
+  --primary-foreground: #16161a;
+
+  --today: #ffad00;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #342e3e;
+  --border-button: #474150;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Ocean Dark — generated from COSMIC theme "Ocean Dark.ron" */
+[data-theme="ocean-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #0c1016;
+  --foreground: #e2e2e3;
+  --muted: rgba(226, 226, 227, 0.55);
+
+  --primary: #7db1c3;
+  --primary-foreground: #16161a;
+
+  --today: #7db1c3;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #2e3137;
+  --border-button: #414549;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* One Dark — generated from COSMIC theme "One Dark.ron" */
+[data-theme="one-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #20252c;
+  --foreground: #e4e5e6;
+  --muted: rgba(228, 229, 230, 0.55);
+
+  --primary: #4497d1;
+  --primary-foreground: #f7f7f7;
+
+  --today: #4497d1;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3f444a;
+  --border-button: #51555a;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* One Light — generated from COSMIC theme "One Light.ron" */
+[data-theme="one-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #eaeaeb;
+  --foreground: #1c1c1c;
+  --muted: rgba(28, 28, 28, 0.55);
+
+  --primary: #487df2;
+  --primary-foreground: #f7f7f7;
+
+  --today: #487df2;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #c9c9ca;
+  --border-button: #b7b7b7;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Pop Classic Dark — generated from COSMIC theme "Pop-Classic-Dark.ron" */
+[data-theme="pop-classic-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #353535;
+  --foreground: #e7e7e7;
+  --muted: rgba(231, 231, 231, 0.55);
+
+  --primary: #f28d2c;
+  --primary-foreground: #16161a;
+
+  --today: #f28d2c;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #515151;
+  --border-button: #616161;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Protest — generated from COSMIC theme "Protest.ron" */
+[data-theme="protest"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #000000;
+  --foreground: #e0e0e0;
+  --muted: rgba(224, 224, 224, 0.55);
+
+  --primary: #c71b1b;
+  --primary-foreground: #f7f7f7;
+
+  --today: #c71b1b;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #242424;
+  --border-button: #383838;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Rose Pine — generated from COSMIC theme "Rose-Pine.ron" */
+[data-theme="rose-pine"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #191724;
+  --foreground: #e3e3e5;
+  --muted: rgba(227, 227, 229, 0.55);
+
+  --primary: #eb6f92;
+  --primary-foreground: #16161a;
+
+  --today: #eb6f92;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #393743;
+  --border-button: #4c4a54;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Solarized Dark — generated from COSMIC theme "Solarized Dark.ron" */
+[data-theme="solarized-dark"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #002b36;
+  --foreground: #e0e6e7;
+  --muted: rgba(224, 230, 231, 0.55);
+
+  --primary: #4497d1;
+  --primary-foreground: #f7f7f7;
+
+  --today: #4497d1;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #244952;
+  --border-button: #385a62;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Solarized Light — generated from COSMIC theme "Solarized Light.ron" */
+[data-theme="solarized-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #fdf6e3;
+  --foreground: #1e1e1b;
+  --muted: rgba(30, 30, 27, 0.55);
+
+  --primary: #268bd2;
+  --primary-foreground: #f7f7f7;
+
+  --today: #268bd2;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #dad4c3;
+  --border-button: #c5c0b1;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Spotify — generated from COSMIC theme "Spotify.ron" */
+[data-theme="spotify"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #050505;
+  --foreground: #e1e1e1;
+  --muted: rgba(225, 225, 225, 0.55);
+
+  --primary: #1ed760;
+  --primary-foreground: #16161a;
+
+  --today: #1ed760;
+  --highlight: #e79cfe;
+
+  --success: #92cf9c;
+  --warning: #f7e062;
+  --error: #fda1a0;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #282828;
+  --border-button: #3c3c3c;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Steam Classic — generated from COSMIC theme "Steam Classic.ron" */
+[data-theme="steam-classic"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #4c5844;
+  --foreground: #eaebe9;
+  --muted: rgba(234, 235, 233, 0.55);
+
+  --primary: #968732;
+  --primary-foreground: #f7f7f7;
+
+  --today: #968732;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #656f5e;
+  --border-button: #737d6d;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Stone — generated from COSMIC theme "Stone.ron" */
+[data-theme="stone"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #131213;
+  --foreground: #e3e3e3;
+  --muted: rgba(227, 227, 227, 0.55);
+
+  --primary: #e1aa5d;
+  --primary-foreground: #16161a;
+
+  --today: #e1aa5d;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #343334;
+  --border-button: #474647;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Synthwave84 — generated from COSMIC theme "Synthwave84.ron" */
+[data-theme="synthwave84"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #171529;
+  --foreground: #e3e3e5;
+  --muted: rgba(227, 227, 229, 0.55);
+
+  --primary: #ff7ed8;
+  --primary-foreground: #16161a;
+
+  --today: #ff7ed8;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #373647;
+  --border-button: #4a4858;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* System76 Light — generated from COSMIC theme "System76 Light.ron" */
+[data-theme="system76-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #f6f6f6;
+  --foreground: #1e1e1e;
+  --muted: rgba(30, 30, 30, 0.55);
+
+  --primary: #ca820f;
+  --primary-foreground: #f7f7f7;
+
+  --today: #ca820f;
+  --highlight: #68217c;
+
+  --success: #185529;
+  --warning: #534800;
+  --error: #78292e;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #d4d4d4;
+  --border-button: #c0c0c0;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Tokyonight — generated from COSMIC theme "Tokyonight.ron" */
+[data-theme="tokyonight"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #1a1b26;
+  --foreground: #e4e4e5;
+  --muted: rgba(228, 228, 229, 0.55);
+
+  --primary: #7aa2f7;
+  --primary-foreground: #16161a;
+
+  --today: #7aa2f7;
+  --highlight: #e79cfe;
+
+  --success: #5ec264;
+  --warning: #e6a23c;
+  --error: #e25252;
+
+  --hover-tint: #c7cad6;
+  --hover-mix: 8%;
+
+  --divider: #3a3b44;
+  --border-button: #4c4d56;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Ubuntu Light — generated from COSMIC theme "Ubuntu Light.ron" */
+[data-theme="ubuntu-light"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #f3f5f2;
+  --foreground: #1d1d1d;
+  --muted: rgba(29, 29, 29, 0.55);
+
+  --primary: #f65e18;
+  --primary-foreground: #f7f7f7;
+
+  --today: #f65e18;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #d1d3d0;
+  --border-button: #bebfbd;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}
+
+/* Windows 95 — generated from COSMIC theme "Windows 95.ron" */
+[data-theme="windows-95"] {
+  --font-heading: var(--sans);
+  --font-button: var(--sans);
+  --font-numerical: var(--sans);
+  --font-heading-transform: normal;
+  --font-button-transform: normal;
+  --font-numerical-transform: normal;
+  --radius-base: 0.75rem;
+  --radius-circle: calc(infinity * 1px);
+  --control-height: 36px;
+
+  --background: #c0c0c0;
+  --foreground: #171717;
+  --muted: rgba(23, 23, 23, 0.55);
+
+  --primary: #00525a;
+  --primary-foreground: #f7f7f7;
+
+  --today: #00525a;
+  --highlight: #68217c;
+
+  --success: #2e7d32;
+  --warning: #b26a00;
+  --error: #c0392b;
+
+  --hover-tint: #5a4a42;
+  --hover-mix: 8%;
+
+  --divider: #a5a5a5;
+  --border-button: #969696;
+
+  --tab-gap: 4px;
+  --tab-list-shadow: none;
+}

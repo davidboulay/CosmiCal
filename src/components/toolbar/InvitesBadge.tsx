@@ -30,6 +30,11 @@ export function InvitesBadge({ persistent = false }: { persistent?: boolean }) {
       .catch(console.error)
   }, [calendars])
 
+  // Mirror pending invitations onto the system-tray icon (shows a dot).
+  useEffect(() => {
+    void rpc.platform.set_tray_pending(invites.length > 0)
+  }, [invites.length])
+
   const isMd = useBreakpoint("md")
   const { timeFormat } = useSettings()
   const { requestSync } = useSync()
@@ -56,7 +61,7 @@ export function InvitesBadge({ persistent = false }: { persistent?: boolean }) {
         <button
           title="Invitations"
           className={cn(
-            "flex size-7 items-center justify-center rounded-circle text-xs font-medium cursor-pointer transition-colors",
+            "flex h-7 min-w-7 items-center justify-center rounded-circle px-2 text-xs font-medium cursor-pointer transition-colors",
             hasInvites
               ? "bg-red-500 text-white hover:bg-red-600"
               : "bg-secondary text-muted-foreground hover:bg-secondary-hover",

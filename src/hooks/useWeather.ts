@@ -8,7 +8,7 @@ import { getForecast, type DailyWeather } from "@/lib/weather"
 // location can't be resolved. Refetches when the location override changes and
 // hourly while mounted.
 export function useWeather(): Map<string, DailyWeather> {
-  const { weatherEnabled, weatherLocation } = useSettings()
+  const { weatherEnabled, weatherLocation, weatherUnit } = useSettings()
   const [data, setData] = useState<Map<string, DailyWeather>>(() => new Map())
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export function useWeather(): Map<string, DailyWeather> {
 
     let cancelled = false
     const load = async () => {
-      const days = await getForecast(weatherLocation)
+      const days = await getForecast(weatherLocation, weatherUnit)
       if (!cancelled) setData(new Map(days.map((d) => [d.dateKey, d])))
     }
 
@@ -29,7 +29,7 @@ export function useWeather(): Map<string, DailyWeather> {
       cancelled = true
       clearInterval(id)
     }
-  }, [weatherEnabled, weatherLocation])
+  }, [weatherEnabled, weatherLocation, weatherUnit])
 
   return data
 }

@@ -4,13 +4,8 @@
 @import "./animations.css";
 
 /* Themes */
-@import "./themes/ren.css";
-@import "./themes/classic.css";
-@import "./themes/catpuccin-latte.css";
-@import "./themes/tokyonight.css";
-@import "./themes/omarchy.css";
-@import "./themes/cosmic.css";
 @import "./themes/cosmic-light.css";
+@import "./themes/cosmic-generated.css";
 
 @font-face {
   font-family: "Geist Mono";

@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 import { rpc } from "@/rpc"
@@ -17,17 +21,36 @@ import { useConnectProvider } from "@/hooks/useConnectProvider"
 import { getProviderDisplayName, getProviderIcon } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 
-import { MoreHorizIcon } from "@/icons/more-horiz"
 import { PlusIcon } from "@/icons/plus"
 
 import { AddAccountModal, type ModalStep } from "./AddAccountModal"
 import { beginProviderConnection } from "./provider-connection"
 
 export function AccountsPage() {
-  const { calendars } = useCalendars()
+  const { calendars, reloadCalendars, accountNameOverrides, setAccountName } = useCalendars()
   const { connect } = useConnectProvider()
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [reconnectStep, setReconnectStep] = useState<ModalStep | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+
+  const confirmRemove = async () => {
+    if (!removeTarget) return
+    setRemoving(true)
+    try {
+      await rpc.caldir.remove_account(removeTarget)
+      await reloadCalendars()
+      setRemoveTarget(null)
+    } catch (e) {
+      toast.error("Couldn't remove account", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setRemoving(false)
+    }
+  }
 
   const calendarsWithAccount = calendars.filter((c) => c.account != null)
   const calendarsByAccount = Object.groupBy(calendarsWithAccount, (c) => c.account!)
@@ -58,8 +81,14 @@ export function AccountsPage() {
             <Account
               key={account}
               account={account}
+              displayName={accountNameOverrides[account] ?? account}
               provider={provider}
               onReconnect={() => reconnect(provider)}
+              onRemove={() => setRemoveTarget(account)}
+              onRename={() => {
+                setRenameTarget(account)
+                setRenameValue(accountNameOverrides[account] ?? account)
+              }}
             />
           ))}
         </div>
@@ -79,6 +108,70 @@ export function AccountsPage() {
       {reconnectStep != null && (
         <AddAccountModal onClose={() => setReconnectStep(null)} initialStep={reconnectStep} />
       )}
+
+      <Dialog open={removeTarget != null} onOpenChange={(o) => !o && setRemoveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove account?</DialogTitle>
+            <DialogDescription>
+              This removes {removeTarget}'s calendars from CosmiCal and signs the account out. Your
+              events stay on the server; you can reconnect anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={removing} onClick={() => void confirmRemove()}>
+              {removing ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renameTarget != null} onOpenChange={(o) => !o && setRenameTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename account</DialogTitle>
+            <DialogDescription>
+              Choose a display name for this account. It's stored locally and doesn't change
+              anything on the server.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            ghost={false}
+            autoFocus
+            value={renameValue}
+            placeholder={renameTarget ?? ""}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && renameTarget) {
+                setAccountName(renameTarget, renameValue)
+                setRenameTarget(null)
+              }
+            }}
+          />
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (renameTarget) setAccountName(renameTarget, "") // reset to default
+                setRenameTarget(null)
+              }}
+            >
+              Reset to default
+            </Button>
+            <Button
+              onClick={() => {
+                if (renameTarget) setAccountName(renameTarget, renameValue)
+                setRenameTarget(null)
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -99,12 +192,18 @@ const statusLabels: Record<AccountStatus, string> = {
 
 function Account({
   account,
+  displayName,
   provider,
   onReconnect,
+  onRemove,
+  onRename,
 }: {
   account: string
+  displayName: string
   provider: string | null
   onReconnect: () => void
+  onRemove: () => void
+  onRename: () => void
 }) {
   const [status, setStatus] = useState<AccountStatus>(provider == null ? "disconnected" : "pending")
 
@@ -134,7 +233,7 @@ function Account({
   }, [account, provider])
 
   const ProviderIcon = getProviderIcon(provider)
-  const displayName = getProviderDisplayName(provider)
+  const providerLabel = getProviderDisplayName(provider)
 
   const statusLabel = statusLabels[status]
   const statusColor = statusColors[status]
@@ -146,7 +245,7 @@ function Account({
       </div>
 
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="heading text-sm">{displayName}</span>
+        <span className="heading text-sm">{providerLabel}</span>
 
         <div className="flex items-center gap-2">
           <Tooltip>
@@ -163,26 +262,26 @@ function Account({
             <TooltipContent>{statusLabel}</TooltipContent>
           </Tooltip>
 
-          <span className="text-xs text-muted-foreground truncate">{account}</span>
+          <span className="text-xs text-muted-foreground truncate">{displayName}</span>
         </div>
       </div>
 
-      <MoreMenu onReconnect={onReconnect} />
-    </div>
-  )
-}
-
-const MoreMenu = ({ onReconnect }: { onReconnect: () => void }) => {
-  return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7">
-          <MoreHorizIcon className="size-4" />
+      <div className="flex items-center gap-1 shrink-0">
+        <Button variant="ghost" size="sm" onClick={onRename}>
+          Rename
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={onReconnect}>Reconnect...</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <Button variant="ghost" size="sm" onClick={onReconnect}>
+          Reconnect
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="text-destructive hover:text-destructive"
+        >
+          Remove
+        </Button>
+      </div>
+    </div>
   )
 }

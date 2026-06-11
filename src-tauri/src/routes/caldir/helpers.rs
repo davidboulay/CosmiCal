@@ -16,8 +16,45 @@ pub(super) fn load_caldir() -> TauResult<Caldir> {
     })
 }
 
+/// The user's own address on a calendar, for matching the "me" attendee.
+///
+/// caldir-core's `remote_email()`/`account_identifier()` return the
+/// `{provider}_account` field, which for Google is the *account display name*
+/// (e.g. "LOJEL David") — not an email. The actual address is the
+/// `{provider}_calendar_id` field (e.g. "david.boulay@lojel.com" for a primary
+/// calendar). Prefer that; fall back to the account identifier.
+pub fn calendar_self_email(calendar: &caldir_core::Calendar) -> Option<String> {
+    let rc = calendar.remote_config()?;
+    let provider = rc.provider_slug();
+    rc.get(&format!("{provider}_calendar_id"))
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .or_else(|| rc.account_identifier().map(String::from))
+}
+
 pub fn is_visible(event: &Event) -> bool {
     event.status != Status::Cancelled
+}
+
+/// True when `email` is an attendee (not the organizer) who still hasn't
+/// responded to the invite.
+///
+/// Unlike `Event::is_pending_invite_for`, this treats a *missing* PARTSTAT as
+/// "needs action": per RFC 5545 the default participation status for an
+/// attendee with no explicit PARTSTAT is `NEEDS-ACTION`. Many providers send
+/// real, unanswered invites without an explicit PARTSTAT, so relying on
+/// `Some(NeedsAction)` alone misses them and the invites badge reports 0.
+pub fn is_pending_invite_for(event: &Event, email: &str) -> bool {
+    use caldir_core::ParticipationStatus;
+
+    if !event.is_invite_for(email) {
+        return false;
+    }
+
+    matches!(
+        event.attendee_status(email),
+        None | Some(ParticipationStatus::NeedsAction)
+    )
 }
 
 /// Sort key that orders RpcEventTime values by their UTC instant.

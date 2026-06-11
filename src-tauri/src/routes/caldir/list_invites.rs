@@ -1,5 +1,5 @@
 use super::helpers::load_caldir;
-use super::helpers::{event_time_sort_key, is_visible};
+use super::helpers::{calendar_self_email, event_time_sort_key, is_pending_invite_for, is_visible};
 use super::types::CalendarEvent;
 use crate::event_cache::EVENT_CACHE;
 use crate::routes::TauResult;
@@ -13,8 +13,8 @@ pub(super) async fn handler(calendar_slugs: Vec<String>) -> TauResult<Vec<Calend
     for slug in &calendar_slugs {
         let calendar = caldir.calendar(slug).map_err(|e| e.to_string())?;
 
-        let email = match calendar.remote_email() {
-            Some(e) => e.to_string(),
+        let email = match calendar_self_email(&calendar) {
+            Some(e) => e,
             None => continue,
         };
 
@@ -29,7 +29,7 @@ pub(super) async fn handler(calendar_slugs: Vec<String>) -> TauResult<Vec<Calend
                 .map(|e| e.to_utc())
                 .unwrap_or_else(|| event.start.to_utc())
                 >= now;
-            if event.is_pending_invite_for(&email) && is_future {
+            if is_pending_invite_for(event, &email) && is_future {
                 invites.push(CalendarEvent::from_event(event, slug, None));
             }
         }

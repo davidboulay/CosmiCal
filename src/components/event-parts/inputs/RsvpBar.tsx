@@ -2,21 +2,40 @@ import { Button } from "@/components/ui/button"
 
 import type { ResponseStatus } from "@/rpc/bindings"
 
-export function RsvpBar({ onRsvp }: { onRsvp: (response: ResponseStatus) => void }) {
+const options: { value: ResponseStatus; label: string }[] = [
+  { value: "tentative", label: "Maybe" },
+  { value: "declined", label: "Decline" },
+  { value: "accepted", label: "Accept" },
+]
+
+/**
+ * Selectable RSVP control. When `status` is provided, the button matching the
+ * user's current response is highlighted so the selected state is always
+ * visible — for both pending (needs-action) and already-answered invites.
+ */
+export function RsvpBar({
+  status,
+  onRsvp,
+}: {
+  status?: ResponseStatus | null
+  onRsvp: (response: ResponseStatus) => void
+}) {
   return (
     <div className="flex gap-1.5 p-3 justify-between">
-      <Button size="sm" variant="secondary" onClick={() => onRsvp("tentative")}>
-        Maybe
-      </Button>
-
-      <div className="flex gap-1.5">
-        <Button size="sm" variant="secondary" onClick={() => onRsvp("declined")}>
-          Decline
-        </Button>
-        <Button size="sm" variant="default" onClick={() => onRsvp("accepted")}>
-          Accept
-        </Button>
-      </div>
+      {options.map((opt) => {
+        const isActive = status === opt.value
+        return (
+          <Button
+            key={opt.value}
+            size="sm"
+            variant={isActive ? "default" : "secondary"}
+            aria-pressed={isActive}
+            onClick={() => onRsvp(opt.value)}
+          >
+            {opt.label}
+          </Button>
+        )
+      })}
     </div>
   )
 }

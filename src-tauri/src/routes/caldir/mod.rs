@@ -12,10 +12,13 @@ mod discard;
 mod get_config;
 mod get_event;
 mod get_provider_connect_info;
+mod google_meet;
 mod list_calendars;
 mod list_events;
 mod list_invites;
 mod list_providers;
+mod places;
+mod remove_account;
 mod rsvp;
 mod search_events;
 mod set_config;
@@ -25,8 +28,9 @@ mod sync_preview;
 mod update_event;
 
 pub use types::{
-    Calendar, CalendarEvent, CreateEventInput, CredentialFieldInput, ProviderConnectInfo,
-    SplitRecurringSeriesInput, SyncPreview, TimeFormat, UpdateEventInput,
+    Calendar, CalendarEvent, CreateEventInput, CreateMeetEventInput, CredentialFieldInput,
+    GoogleContact, GoogleMeetStatus, ProviderConnectInfo, SplitRecurringSeriesInput, SyncPreview,
+    TimeFormat, UpdateEventInput,
 };
 
 use crate::routes::TauResult;
@@ -83,6 +87,8 @@ pub trait CaldirApi {
 
     async fn create_local_calendar(name: String, color: Option<String>) -> TauResult<Calendar>;
 
+    async fn remove_account(account: String) -> TauResult<()>;
+
     async fn get_time_format() -> TauResult<TimeFormat>;
     async fn set_time_format(time_format: TimeFormat) -> TauResult<()>;
 
@@ -94,6 +100,17 @@ pub trait CaldirApi {
 
     async fn get_calendar_dir() -> TauResult<String>;
     async fn set_calendar_dir(path: String) -> TauResult<()>;
+
+    // --- Google Meet (REST-based conference creation) ---
+    async fn set_google_meet_credentials(client_id: String, client_secret: String)
+    -> TauResult<()>;
+    async fn google_meet_status() -> TauResult<GoogleMeetStatus>;
+    async fn google_meet_connect<R: Runtime>(app_handle: AppHandle<R>) -> TauResult<()>;
+    async fn google_meet_disconnect() -> TauResult<()>;
+    async fn create_event_with_meet(input: CreateMeetEventInput) -> TauResult<String>;
+    async fn search_google_contacts(query: String) -> TauResult<Vec<GoogleContact>>;
+    async fn set_google_features(meet_enabled: bool, contacts_enabled: bool) -> TauResult<()>;
+    async fn search_places(query: String) -> TauResult<Vec<String>>;
 }
 
 #[derive(Clone)]
@@ -222,6 +239,10 @@ impl CaldirApi for CaldirApiImpl {
         create_local_calendar::handler(name, color).await
     }
 
+    async fn remove_account(self, account: String) -> TauResult<()> {
+        remove_account::handler(account).await
+    }
+
     async fn get_time_format(self) -> TauResult<TimeFormat> {
         get_config::get_time_format().await
     }
@@ -248,5 +269,38 @@ impl CaldirApi for CaldirApiImpl {
     }
     async fn set_calendar_dir(self, path: String) -> TauResult<()> {
         set_config::set_calendar_dir(path).await
+    }
+
+    async fn set_google_meet_credentials(
+        self,
+        client_id: String,
+        client_secret: String,
+    ) -> TauResult<()> {
+        google_meet::set_credentials(client_id, client_secret).await
+    }
+    async fn google_meet_status(self) -> TauResult<GoogleMeetStatus> {
+        google_meet::status().await
+    }
+    async fn google_meet_connect<R: Runtime>(self, app: AppHandle<R>) -> TauResult<()> {
+        google_meet::connect(app).await
+    }
+    async fn google_meet_disconnect(self) -> TauResult<()> {
+        google_meet::disconnect().await
+    }
+    async fn create_event_with_meet(self, input: CreateMeetEventInput) -> TauResult<String> {
+        google_meet::create_event_with_meet(input).await
+    }
+    async fn search_google_contacts(self, query: String) -> TauResult<Vec<GoogleContact>> {
+        google_meet::search_contacts(query).await
+    }
+    async fn set_google_features(
+        self,
+        meet_enabled: bool,
+        contacts_enabled: bool,
+    ) -> TauResult<()> {
+        google_meet::set_features(meet_enabled, contacts_enabled).await
+    }
+    async fn search_places(self, query: String) -> TauResult<Vec<String>> {
+        places::search(query).await
     }
 }

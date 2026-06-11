@@ -29,6 +29,9 @@ pub(super) async fn handler<R: Runtime>(
         .port();
     let redirect_uri = format!("http://localhost:{}/callback", port);
 
+    // Google Meet uses a separate, baked-in OAuth client routed through the
+    // CosmiCal proxy, so it no longer piggybacks on these provider credentials.
+    // Enabling Meet is a one-click "Connect" in Settings (Google → Meet).
     connect_provider::run_with_data(
         app,
         provider,

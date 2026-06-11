@@ -1,8 +1,11 @@
 import { ComponentType } from "react"
 
+import { AboutPage } from "@/components/settings/about/AboutPage"
 import { AccountsPage } from "@/components/settings/accounts/AccountsPage"
 import { CalendarsPage } from "@/components/settings/calendars/CalendarsPage"
+import { DateTimePage } from "@/components/settings/datetime/DateTimePage"
 import { GeneralPage } from "@/components/settings/general/GeneralPage"
+import { GoogleFeaturesPage } from "@/components/settings/google/GoogleFeaturesPage"
 import { RemindersPage } from "@/components/settings/reminders/RemindersPage"
 import { ThemesPage } from "@/components/settings/themes/ThemesPage"
 
@@ -11,7 +14,10 @@ import { cn } from "@/lib/utils"
 
 import { BellIcon } from "@/icons/bell"
 import { CalendarIcon } from "@/icons/calendar"
+import { ClockIcon } from "@/icons/clock"
+import { GoogleMeetIcon } from "@/icons/google-meet"
 import { PaletteIcon } from "@/icons/palette"
+import { QuestionMarkIcon } from "@/icons/question-mark"
 import { SettingsIcon } from "@/icons/settings"
 import { UserIcon } from "@/icons/user"
 
@@ -24,10 +30,18 @@ interface NavItem {
 
 export const NAV_ITEMS = [
   { tab: "general" as const, label: "General", icon: SettingsIcon, page: GeneralPage },
+  { tab: "datetime" as const, label: "Date & Time", icon: ClockIcon, page: DateTimePage },
   { tab: "accounts" as const, label: "Accounts", icon: UserIcon, page: AccountsPage },
+  {
+    tab: "google" as const,
+    label: "Google Features",
+    icon: GoogleMeetIcon,
+    page: GoogleFeaturesPage,
+  },
   { tab: "calendars" as const, label: "Calendars", icon: CalendarIcon, page: CalendarsPage },
   { tab: "reminders" as const, label: "Reminders", icon: BellIcon, page: RemindersPage },
   { tab: "themes" as const, label: "Themes", icon: PaletteIcon, page: ThemesPage },
+  { tab: "about" as const, label: "About", icon: QuestionMarkIcon, page: AboutPage },
 ] satisfies NavItem[]
 
 export type SettingsTab = (typeof NAV_ITEMS)[number]["tab"]

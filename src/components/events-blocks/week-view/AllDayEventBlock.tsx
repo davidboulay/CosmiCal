@@ -37,7 +37,6 @@ export function WeekAllDayBar({
   const ref = useRef<HTMLDivElement>(null)
   const [contextOpen, setContextOpen] = useState(false)
 
-  const isDashed = isPending || isDeclined
   const highlighted = highlightedByParent || contextOpen
   const fillsRow = item.endCol - item.startCol >= 7
 
@@ -62,8 +61,9 @@ export function WeekAllDayBar({
           calendarColor: item.calendarColor,
           eventColor: item.event.color,
           highlighted,
-          isDashed,
           isDraft,
+          isDeclined,
+          isPending,
         })}
         onClick={
           isDraft

@@ -6,8 +6,13 @@ import { DragRegion } from "@/components/ui/drag-region"
 import { useTheme } from "@/hooks/useTheme"
 import { cn, isMacOS } from "@/lib/utils"
 
+function initialTab(): SettingsTab {
+  const tab = new URLSearchParams(window.location.search).get("tab")
+  return NAV_ITEMS.some((item) => item.tab === tab) ? (tab as SettingsTab) : "general"
+}
+
 export function SettingsWindow() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general")
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
   useTheme()
 
   const activeItem = NAV_ITEMS.find((item) => item.tab === activeTab)

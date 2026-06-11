@@ -30,8 +30,6 @@ export function MonthAllDayEvent({
   const [contextOpen, setContextOpen] = useState(false)
 
   const highlighted = highlightedByParent || contextOpen
-  const isDashed = isPending || isDeclined
-
   const fillsRow = item.endCol - item.startCol === 7
 
   const handleClick: MouseEventHandler<HTMLDivElement> | undefined = (e) => {
@@ -49,7 +47,6 @@ export function MonthAllDayEvent({
       className={cn(
         getEventBlockClasses(highlighted, isDeclined),
         "absolute truncate px-1 py-px leading-4",
-        isDashed && "opacity-50",
         !isDraft && dimmed && "opacity-50",
         item.isStart && "rounded-l",
         item.isEnd && "rounded-r",
@@ -63,8 +60,9 @@ export function MonthAllDayEvent({
           calendarColor: item.calendarColor,
           eventColor: item.event.color,
           highlighted,
-          isDashed,
           isDraft,
+          isDeclined,
+          isPending,
         }),
       }}
       onClick={handleClick}

@@ -64,12 +64,20 @@ export function getEventBlockStyle({
   highlighted,
   isDashed,
   isDraft,
+  isDeclined,
+  isPending,
 }: {
   calendarColor: string | null
   eventColor: string | null
   highlighted?: boolean
   isDashed?: boolean
   isDraft?: boolean
+  /** Declined (rejected): semi-transparent + strikethrough (the line-through
+   * comes from getEventBlockClasses) so it reads as "not going" but stays visible. */
+  isDeclined?: boolean
+  /** No reply yet (needs-action): zebra/striped overlay so it stands out as
+   * "awaiting your response". */
+  isPending?: boolean
 }): CSSProperties {
   const { borderColor, textColor, backgroundColor } = getEventBlockColors({
     calendarColor,
@@ -92,6 +100,26 @@ export function getEventBlockStyle({
     return {
       border: `1px dashed ${borderColor}`,
       color: textColor,
+    }
+  }
+
+  // Declined (rejected): normal fill, semi-transparent. The strikethrough is
+  // applied via getEventBlockClasses (line-through) so it reads as "not going".
+  if (isDeclined) {
+    return {
+      backgroundColor,
+      color: textColor,
+      opacity: 0.5,
+    }
+  }
+
+  // No reply yet (needs-action): keep the normal fill but lay a zebra/striped
+  // pattern over it so it stands out as awaiting a response.
+  if (isPending) {
+    return {
+      backgroundColor,
+      color: textColor,
+      backgroundImage: `repeating-linear-gradient(45deg, color-mix(in srgb, ${borderColor} 35%, transparent) 0, color-mix(in srgb, ${borderColor} 35%, transparent) 4px, transparent 4px, transparent 8px)`,
     }
   }
 

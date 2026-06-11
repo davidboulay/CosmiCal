@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { toast } from "sonner"
 
 import { rpc } from "@/rpc"
 import type { EventAttendee } from "@/rpc/bindings"
@@ -22,7 +23,10 @@ import {
   addMinutes,
   computeEventDateInfo,
   DEFAULT_DURATION_MINS,
+  formatDateKey,
+  isAllDay,
   nowZoned,
+  toInteropDate,
   type EventTime,
 } from "@/lib/event-time"
 import { toRpcEventTime } from "@/lib/event-time/rpc"
@@ -43,6 +47,9 @@ interface DraftEvent {
   location: string | null
   recurrence: Recurrence | null
   attendees: EventAttendee[]
+  conferenceUrl?: string | null
+  /** Auto-create a Google Meet link on save (via the Calendar REST API). */
+  createGoogleMeet?: boolean
 }
 
 interface EventTextContextType {
@@ -67,6 +74,9 @@ interface EventDraftContextType {
 
   setDefaultDraftEvent: () => void
   createDraftEvent: () => Promise<void>
+  /** Like {@link createDraftEvent} but mints a Google Meet link via the Calendar
+   * REST API. Shows the event optimistically and reconciles via sync. */
+  createDraftEventWithMeet: () => void
 }
 
 const EventTextContext = createContext({} as EventTextContextType)
@@ -123,6 +133,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       location: null,
       recurrence: null,
       attendees: [],
+      conferenceUrl: null,
     }
   }, [defaultCalendarId])
 
@@ -178,7 +189,8 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
     [setDefaultDraftEvent, defaultReminders],
   )
 
-  const { setCalendarEvents, reloadEvents } = useCalEvents()
+  const { setCalendarEvents, reloadEvents, addOptimisticEvent, resolveOptimisticEvent } =
+    useCalEvents()
   const { requestSync } = useSync()
 
   const createDraftEvent = useCallback(async () => {
@@ -201,7 +213,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       reminders: draftReminders,
       organizer: null,
       attendees: draftEvent.attendees,
-      conference_url: null,
+      conference_url: draftEvent.conferenceUrl ?? null,
       calendar_slug: draftEvent.calendarId,
       color: null,
       updated: null,
@@ -222,6 +234,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       recurrence: draftEvent.recurrence ? recurrenceToRpc(draftEvent.recurrence) : null,
       reminders: draftReminders,
       attendees: draftEvent.attendees,
+      conference_url: draftEvent.conferenceUrl,
     })
 
     if (draftEvent.recurrence) {
@@ -243,6 +256,75 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
     reloadEvents,
   ])
 
+  const createDraftEventWithMeet = useCallback(() => {
+    if (!draftEvent.calendarId) return
+
+    const calendarId = draftEvent.calendarId
+    const snapshot = draftEvent
+    const reminders = draftReminders
+    const optimisticId = crypto.randomUUID()
+
+    const optimisticEvent: CalendarEvent = {
+      id: optimisticId,
+      recurring_event_id: null,
+      summary: snapshot.summary ?? "",
+      description: snapshot.description,
+      location: snapshot.location ?? null,
+      start: snapshot.start,
+      end: snapshot.end,
+      dateInfo: computeEventDateInfo(snapshot.start, snapshot.end),
+      status: "confirmed",
+      recurrence: snapshot.recurrence,
+      master_recurrence: null,
+      reminders,
+      organizer: null,
+      attendees: snapshot.attendees,
+      conference_url: null,
+      calendar_slug: calendarId,
+      color: null,
+      updated: null,
+    }
+    // Show it immediately and keep it across reloads; the real synced event
+    // (with the Meet link) replaces it automatically once it arrives.
+    addOptimisticEvent(optimisticEvent)
+    setDefaultDraftEvent()
+    _setText("")
+
+    void (async () => {
+      try {
+        await rpc.caldir.create_event_with_meet({
+          calendar_slug: calendarId,
+          summary: snapshot.summary ?? "",
+          description: snapshot.description,
+          location: snapshot.location ?? null,
+          all_day: isAllDay(snapshot.start),
+          start_iso: toInteropDate(snapshot.start).toISOString(),
+          end_iso: toInteropDate(snapshot.end).toISOString(),
+          start_date: formatDateKey(snapshot.start),
+          end_date: formatDateKey(snapshot.end),
+          attendees: (snapshot.attendees ?? []).map((a) => a.email),
+        })
+        // Pull the new event in (honoring the auto-sync setting). On a successful
+        // apply, caldir emits CALDIR_CHANGED → reload → the optimistic copy is
+        // replaced by the synced event. With auto-sync off it stays visible until
+        // the user next syncs.
+        void requestSync()
+      } catch (e) {
+        toast.error("Couldn't create the Google Meet event", {
+          description: e instanceof Error ? e.message : String(e),
+        })
+        resolveOptimisticEvent(optimisticId)
+      }
+    })()
+  }, [
+    draftEvent,
+    draftReminders,
+    requestSync,
+    setDefaultDraftEvent,
+    addOptimisticEvent,
+    resolveOptimisticEvent,
+  ])
+
   const textValue = useMemo<EventTextContextType>(() => ({ text, setText }), [text, setText])
 
   const draftValue = useMemo<EventDraftContextType>(
@@ -258,6 +340,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       setDraftReminders,
       setDefaultDraftEvent,
       createDraftEvent,
+      createDraftEventWithMeet,
     }),
     [
       isDrafting,
@@ -268,6 +351,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       setDefaultDraftEvent,
       setDraftPopoverOpen,
       createDraftEvent,
+      createDraftEventWithMeet,
     ],
   )
 

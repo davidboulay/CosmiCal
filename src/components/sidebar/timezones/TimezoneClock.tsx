@@ -22,7 +22,7 @@ export function TimezoneClock() {
   const zones = [getLocalTzid(), ...extraTimezones]
 
   const format = (tz: string) =>
-    new Intl.DateTimeFormat(timeFormat === "12h" ? "en-US" : "en-GB", {
+    new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hourCycle: timeFormat === "12h" ? "h12" : "h23",

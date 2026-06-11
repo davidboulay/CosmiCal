@@ -10,6 +10,9 @@ pub struct Calendar {
     pub color: Option<String>,
     pub provider: Option<String>,
     pub account: Option<String>,
+    /// The user's own address on this calendar (used to match the "me" attendee
+    /// for RSVP/pending detection). May differ from `account` (an opaque id).
+    pub email: Option<String>,
     pub read_only: Option<bool>,
 }
 
@@ -121,6 +124,42 @@ pub struct CredentialFieldInput {
     pub value: String,
 }
 
+#[derive(Serialize, Deserialize, Type)]
+pub struct GoogleMeetStatus {
+    /// Client id + secret have been entered.
+    pub configured: bool,
+    /// A refresh token is stored (user has consented).
+    pub connected: bool,
+    /// Per-feature toggles (only meaningful when connected).
+    pub meet_enabled: bool,
+    pub contacts_enabled: bool,
+}
+
+/// A Google contact returned for invitee autocomplete.
+#[derive(Clone, Serialize, Deserialize, Type)]
+pub struct GoogleContact {
+    pub name: Option<String>,
+    pub email: String,
+}
+
+/// Input for creating an event that should get a freshly-minted Google Meet
+/// link via the Calendar REST API. Times are pre-formatted by the frontend:
+/// `start_iso`/`end_iso` are RFC 3339 for timed events; `start_date`/`end_date`
+/// are `YYYY-MM-DD` for all-day events.
+#[derive(Clone, Serialize, Deserialize, Type)]
+pub struct CreateMeetEventInput {
+    pub calendar_slug: String,
+    pub summary: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub all_day: bool,
+    pub start_iso: String,
+    pub end_iso: String,
+    pub start_date: String,
+    pub end_date: String,
+    pub attendees: Vec<String>,
+}
+
 #[derive(Clone, Serialize, Deserialize, Type)]
 pub enum ProviderConnectStepKind {
     #[serde(rename = "oauth_redirect")]
@@ -171,6 +210,9 @@ pub struct CreateEventInput {
     pub recurrence: Option<RpcRecurrence>,
     pub reminders: Vec<i32>,
     pub attendees: Vec<EventAttendee>,
+    /// Conference/video-call URL to persist as X-GOOGLE-CONFERENCE.
+    #[serde(default)]
+    pub conference_url: Option<String>,
 }
 
 /// Input for updating an event
@@ -188,6 +230,9 @@ pub struct UpdateEventInput {
     pub recurrence: Option<RpcRecurrence>,
     pub reminders: Vec<i32>,
     pub attendees: Vec<EventAttendee>,
+    /// Conference/video-call URL to persist as X-GOOGLE-CONFERENCE.
+    #[serde(default)]
+    pub conference_url: Option<String>,
 }
 
 /// Input for splitting a recurring series at a given instance.
@@ -215,6 +260,33 @@ pub struct SyncPreview {
     pub to_push_count: u32,
     pub to_push_delete_count: u32,
     pub to_pull_count: u32,
+}
+
+/// X-property name used to carry a video-conference URL (read by the frontend
+/// via CalendarEvent::conference_url).
+pub const X_CONFERENCE: &str = "X-GOOGLE-CONFERENCE";
+
+/// Set or clear the conference URL on an event by managing its X-GOOGLE-CONFERENCE
+/// x-property. `Some(url)` upserts (preserving any existing params); `None` or an
+/// empty/whitespace string removes the property.
+pub fn set_conference_url(event: &mut caldir_core::Event, url: Option<&str>) {
+    let trimmed = url.map(str::trim).filter(|s| !s.is_empty());
+    match trimmed {
+        Some(value) => {
+            if let Some(existing) = event
+                .x_properties
+                .iter_mut()
+                .find(|p| p.name == X_CONFERENCE)
+            {
+                existing.value = value.to_string();
+            } else {
+                event
+                    .x_properties
+                    .push(caldir_core::XProperty::new(X_CONFERENCE, value));
+            }
+        }
+        None => event.x_properties.retain(|p| p.name != X_CONFERENCE),
+    }
 }
 
 /// Map a Google Calendar event color ID (1–11) to its canonical hex color.
@@ -246,6 +318,7 @@ impl From<&caldir_core::Calendar> for Calendar {
             account: c
                 .remote_config()
                 .and_then(|r| r.account_identifier().map(String::from)),
+            email: super::helpers::calendar_self_email(c),
             read_only: c.read_only_setting(),
         }
     }

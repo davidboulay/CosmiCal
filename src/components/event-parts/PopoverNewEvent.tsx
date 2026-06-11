@@ -85,7 +85,11 @@ export function PopoverNewEvent() {
           e.preventDefault()
         }}
       >
-        <ComposeEventInner summaryRef={summaryRef} onCreated={() => setDraftPopoverOpen(false)} />
+        <ComposeEventInner
+          summaryRef={summaryRef}
+          onCreated={() => setDraftPopoverOpen(false)}
+          onCancel={() => setDraftPopoverOpen(false)}
+        />
       </PopoverContent>
     </Popover>
   )

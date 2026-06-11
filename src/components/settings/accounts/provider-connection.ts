@@ -16,8 +16,13 @@ export async function beginProviderConnection({
   const info = await rpc.caldir.get_provider_connect_info(provider)
 
   if (info.step === "oauth_redirect" || info.step === "hosted_oauth") {
-    await connect(provider)
+    // Close the dialog as soon as the OAuth hand-off starts. Awaiting the whole
+    // connect would keep this dialog open through the initial event pull (all
+    // calendars), which can take a while — so it looked "stuck" even though
+    // auth had already succeeded. Calendars + events stream in via the
+    // background sync / file watcher. `connect` handles its own errors.
     onClose()
+    void connect(provider)
   } else if (info.step === "needs_setup") {
     onSetStep({
       kind: "setup",

@@ -8,7 +8,7 @@ mod delivered_cache;
 use std::path::{Path, PathBuf};
 use std::time::Duration as StdDuration;
 
-use caldir_core::{Caldir, Event, EventTime, TimeFormat};
+use caldir_core::{Caldir, Event, EventTime, ParticipationStatus, TimeFormat};
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use rencal_config::RencalConfig;
 
@@ -29,10 +29,30 @@ const MAX_REMINDER_BEFORE_MINUTES: i64 = 28 * 24 * 60;
 /// after-midnight patterns without dragging the scan window unreasonably far back.
 const MAX_REMINDER_AFTER_MINUTES: i64 = 24 * 60;
 
+/// The user's own address on a calendar. caldir-core's `remote_email()` returns
+/// the `{provider}_account` field, which for Google is the account display name
+/// (e.g. "LOJEL David"), not an email — the real address is the
+/// `{provider}_calendar_id` field. Prefer that; fall back to the account id.
+fn calendar_self_email(calendar: &caldir_core::Calendar) -> Option<String> {
+    let rc = calendar.remote_config()?;
+    let provider = rc.provider_slug();
+    rc.get(&format!("{provider}_calendar_id"))
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .or_else(|| rc.account_identifier().map(String::from))
+}
+
 /// Host-provided notification sink. Implementations should not block —
 /// spawn off the tick thread if the underlying call is slow.
 pub trait Notifier: Send + Sync + 'static {
     fn notify(&self, title: &str, body: &str, icon: Option<&Path>);
+
+    /// Like [`notify`], but `open` carries a deep-link token the host can use to
+    /// open the relevant event when the notification is clicked. The default
+    /// ignores it (hosts without click support behave as before).
+    fn notify_event(&self, title: &str, body: &str, icon: Option<&Path>, _open: Option<&str>) {
+        self.notify(title, body, icon)
+    }
 }
 
 /// Linux notify-send fallback. Used by both the daemon and (when the daemon
@@ -43,27 +63,68 @@ pub trait Notifier: Send + Sync + 'static {
 pub struct NotifySendNotifier;
 
 #[cfg(target_os = "linux")]
-impl Notifier for NotifySendNotifier {
-    fn notify(&self, title: &str, body: &str, icon: Option<&Path>) {
+impl NotifySendNotifier {
+    /// `open`: when set, register a default click action and, on click, launch
+    /// the app with `--open-event=<token>` so it jumps to the event.
+    fn run(title: &str, body: &str, icon: Option<String>, open: Option<String>) {
         let title = title.to_string();
         let body = body.to_string();
-        let icon = icon.map(|p| p.to_string_lossy().into_owned());
         std::thread::spawn(move || {
             let mut cmd = std::process::Command::new("notify-send");
-            cmd.arg("--app-name=rencal");
+            cmd.arg("--app-name=CosmiCal");
             // Persist until dismissed — event reminders are easy to miss at the
             // daemon's default 5s timeout (mako/dunst). 0 = never expire.
             cmd.arg("--expire-time=0");
-            if let Some(icon) = icon {
+            if let Some(icon) = &icon {
                 cmd.arg(format!("--icon={icon}"));
             }
+            if open.is_some() {
+                // Default action = clicking the notification body. `--wait` blocks
+                // until the notification is acted on/closed and prints the invoked
+                // action key to stdout (libnotify >= 0.7.9 / dunst / mako).
+                cmd.arg("--wait").arg("--action=default=Open");
+            }
             cmd.arg(&title).arg(&body);
-            match cmd.status() {
-                Ok(s) if !s.success() => log::warn!("notify-send {s}"),
-                Err(e) => log::warn!("notify-send err: {e}"),
-                _ => {}
+
+            match open {
+                Some(token) => match cmd.output() {
+                    Ok(out) => {
+                        if String::from_utf8_lossy(&out.stdout).trim() == "default" {
+                            let bin =
+                                std::env::var("RENCAL_BIN").unwrap_or_else(|_| "rencal".into());
+                            if let Err(e) = std::process::Command::new(bin)
+                                .arg(format!("--open-event={token}"))
+                                .spawn()
+                            {
+                                log::warn!("failed to launch app on notification click: {e}");
+                            }
+                        }
+                    }
+                    Err(e) => log::warn!("notify-send err: {e}"),
+                },
+                None => match cmd.status() {
+                    Ok(s) if !s.success() => log::warn!("notify-send {s}"),
+                    Err(e) => log::warn!("notify-send err: {e}"),
+                    _ => {}
+                },
             }
         });
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl Notifier for NotifySendNotifier {
+    fn notify(&self, title: &str, body: &str, icon: Option<&Path>) {
+        Self::run(title, body, icon.map(|p| p.to_string_lossy().into_owned()), None)
+    }
+
+    fn notify_event(&self, title: &str, body: &str, icon: Option<&Path>, open: Option<&str>) {
+        Self::run(
+            title,
+            body,
+            icon.map(|p| p.to_string_lossy().into_owned()),
+            open.map(str::to_string),
+        )
     }
 }
 
@@ -137,8 +198,13 @@ pub fn check_and_notify(
                 continue;
             }
         };
+        // The user's address on this calendar, used to skip reminders for
+        // events they've declined. `None` for local calendars with no remote
+        // account — those events are never invites, so nothing to skip.
+        let user_email = calendar_self_email(&calendar);
+
         match calendar.expanded_events_in_range(range_start, range_end) {
-            Ok(es) => events.extend(es),
+            Ok(es) => events.extend(es.into_iter().filter(|e| !user_declined(e, &user_email))),
             Err(e) => {
                 let slug = calendar.slug().unwrap_or("?");
                 log::warn!("[{slug}] expanded_events_in_range err: {e}");
@@ -227,7 +293,15 @@ fn process_reminders(
             summary_str
         );
         let body = format_body(event, time_format, Local::now());
-        notifier.notify(summary_str, &body, icon);
+        // Deep-link token: event start (epoch ms, for date navigation) + the
+        // instance id (best-effort selection). The app opens to this on click.
+        let start_ms = event
+            .start
+            .to_local_tz(&Local)
+            .with_timezone(&Utc)
+            .timestamp_millis();
+        let open = format!("{}::{}", start_ms, event.event_instance_id());
+        notifier.notify_event(summary_str, &body, icon, Some(&open));
         fired += 1;
     }
 
@@ -261,6 +335,16 @@ fn delivered_cache_path() -> Option<PathBuf> {
             .join("rencal")
             .join("delivered-reminders.json"),
     )
+}
+
+/// True when `user_email` is set and that attendee has declined `event`.
+/// Declined events stay visible in the UI but must not produce reminders —
+/// the user already opted out of attending.
+fn user_declined(event: &Event, user_email: &Option<String>) -> bool {
+    let Some(email) = user_email else {
+        return false;
+    };
+    event.attendee_status(email) == Some(ParticipationStatus::Declined)
 }
 
 fn compute_trigger_time(event: &Event, minutes_before: i64) -> Option<DateTime<Utc>> {
@@ -635,6 +719,33 @@ mod tests {
         );
 
         assert_eq!(fired, 1);
+    }
+
+    #[test]
+    fn user_declined_skips_only_declined_events() {
+        use caldir_core::Attendee;
+
+        let mut event = make_event("evt-1", t(2026, 4, 29, 12, 30), 60);
+        event.attendees = vec![Attendee {
+            email: "me@example.com".to_string(),
+            name: None,
+            status: Some(ParticipationStatus::Declined),
+        }];
+
+        let me = Some("me@example.com".to_string());
+        assert!(user_declined(&event, &me));
+
+        // Accepted attendee is not skipped.
+        event.attendees[0].status = Some(ParticipationStatus::Accepted);
+        assert!(!user_declined(&event, &me));
+
+        // No remote account => never skip.
+        event.attendees[0].status = Some(ParticipationStatus::Declined);
+        assert!(!user_declined(&event, &None));
+
+        // A different user's decline doesn't suppress my reminder.
+        let other = Some("other@example.com".to_string());
+        assert!(!user_declined(&event, &other));
     }
 
     #[test]

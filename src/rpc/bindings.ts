@@ -4,7 +4,12 @@ import { createTauRPCProxy as createProxy, type InferCommandOutput } from 'taurp
 type TAURI_CHANNEL<T> = (response: T) => void
 
 
-export type Calendar = { slug: string; name: string | null; color: string | null; provider: string | null; account: string | null; read_only: boolean | null }
+export type Calendar = { slug: string; name: string | null; color: string | null; provider: string | null; account: string | null; 
+/**
+ * The user's own address on this calendar (used to match the "me" attendee
+ * for RSVP/pending detection). May differ from `account` (an opaque id).
+ */
+email: string | null; read_only: boolean | null }
 
 export type CalendarEvent = { id: string; recurring_event_id: string | null; summary: string; description: string | null; location: string | null; start: RpcEventTime; end: RpcEventTime; status: string; recurrence: RpcRecurrence | null; master_recurrence: RpcRecurrence | null; reminders: number[]; organizer: EventAttendee | null; attendees: EventAttendee[]; conference_url: string | null; calendar_slug: string; color: string | null; 
 /**
@@ -16,11 +21,42 @@ updated: string | null }
 /**
  * Input for creating an event
  */
-export type CreateEventInput = { calendar_slug: string; summary: string; description: string | null; location: string | null; start: RpcEventTime; end: RpcEventTime; recurrence: RpcRecurrence | null; reminders: number[]; attendees: EventAttendee[] }
+export type CreateEventInput = { calendar_slug: string; summary: string; description: string | null; location: string | null; start: RpcEventTime; end: RpcEventTime; recurrence: RpcRecurrence | null; reminders: number[]; attendees: EventAttendee[]; 
+/**
+ * Conference/video-call URL to persist as X-GOOGLE-CONFERENCE.
+ */
+conference_url?: string | null }
+
+/**
+ * Input for creating an event that should get a freshly-minted Google Meet
+ * link via the Calendar REST API. Times are pre-formatted by the frontend:
+ * `start_iso`/`end_iso` are RFC 3339 for timed events; `start_date`/`end_date`
+ * are `YYYY-MM-DD` for all-day events.
+ */
+export type CreateMeetEventInput = { calendar_slug: string; summary: string; description: string | null; location: string | null; all_day: boolean; start_iso: string; end_iso: string; start_date: string; end_date: string; attendees: string[] }
 
 export type CredentialFieldInput = { id: string; value: string }
 
 export type EventAttendee = { name: string | null; email: string; response_status: ResponseStatus | null }
+
+/**
+ * A Google contact returned for invitee autocomplete.
+ */
+export type GoogleContact = { name: string | null; email: string }
+
+export type GoogleMeetStatus = { 
+/**
+ * Client id + secret have been entered.
+ */
+configured: boolean; 
+/**
+ * A refresh token is stored (user has consented).
+ */
+connected: boolean; 
+/**
+ * Per-feature toggles (only meaningful when connected).
+ */
+meet_enabled: boolean; contacts_enabled: boolean }
 
 export type OmarchyColors = { background: string; foreground: string; accent: string; cursor: string | null; selection_foreground: string | null; selection_background: string | null; color0: string; color1: string; color2: string; color3: string; color4: string; color5: string; color6: string; color7: string; color8: string; color9: string; color10: string; color11: string; color12: string; color13: string; color14: string; color15: string }
 
@@ -96,13 +132,18 @@ export type UpdateEventInput = { id: string; calendar_slug: string;
 /**
  * If set and different from calendar_slug, moves the event to this calendar
  */
-new_calendar_slug: string | null; summary: string; description: string | null; location: string | null; start: RpcEventTime; end: RpcEventTime; recurrence: RpcRecurrence | null; reminders: number[]; attendees: EventAttendee[] }
+new_calendar_slug: string | null; summary: string; description: string | null; location: string | null; start: RpcEventTime; end: RpcEventTime; recurrence: RpcRecurrence | null; reminders: number[]; attendees: EventAttendee[]; 
+/**
+ * Conference/video-call URL to persist as X-GOOGLE-CONFERENCE.
+ */
+conference_url?: string | null }
 
-const ARGS_MAP = { 'caldir':'{"check_provider_connection":["provider_name","account"],"connect_provider":["provider_name"],"connect_provider_with_credentials":["provider_name","credentials"],"create_event":["input"],"create_local_calendar":["name","color"],"delete_event":["calendar_slug","event_id"],"delete_recurring_series":["calendar_slug","uid"],"discard":[],"get_calendar_dir":[],"get_default_calendar":[],"get_default_reminders":[],"get_event":["calendar_slug","event_id"],"get_provider_connect_info":["provider_name"],"get_time_format":[],"list_calendars":[],"list_events":["calendar_slugs","start","end"],"list_invites":["calendar_slugs"],"list_providers":[],"rsvp":["calendar_slug","event_id","response"],"search_events":["calendar_slugs","query"],"set_calendar_dir":["path"],"set_default_calendar":["slug"],"set_default_reminders":["minutes"],"set_time_format":["time_format"],"split_recurring_series_at":["input"],"sync":["allow_mass_delete"],"sync_preview":[],"update_event":["input"]}', 'config':'{"get_auto_sync_enabled":[],"get_notifications_enabled":[],"get_theme":[],"set_auto_sync_enabled":["enabled"],"set_notifications_enabled":["enabled"],"set_theme":["theme"]}', 'omarchy':'{"get_colors":[]}', 'platform':'{"needs_native_decorations":[]}' }
+const ARGS_MAP = { 'caldir':'{"check_provider_connection":["provider_name","account"],"connect_provider":["provider_name"],"connect_provider_with_credentials":["provider_name","credentials"],"create_event":["input"],"create_event_with_meet":["input"],"create_local_calendar":["name","color"],"delete_event":["calendar_slug","event_id"],"delete_recurring_series":["calendar_slug","uid"],"discard":[],"get_calendar_dir":[],"get_default_calendar":[],"get_default_reminders":[],"get_event":["calendar_slug","event_id"],"get_provider_connect_info":["provider_name"],"get_time_format":[],"google_meet_connect":[],"google_meet_disconnect":[],"google_meet_status":[],"list_calendars":[],"list_events":["calendar_slugs","start","end"],"list_invites":["calendar_slugs"],"list_providers":[],"remove_account":["account"],"rsvp":["calendar_slug","event_id","response"],"search_events":["calendar_slugs","query"],"search_google_contacts":["query"],"search_places":["query"],"set_calendar_dir":["path"],"set_default_calendar":["slug"],"set_default_reminders":["minutes"],"set_google_features":["meet_enabled","contacts_enabled"],"set_google_meet_credentials":["client_id","client_secret"],"set_time_format":["time_format"],"split_recurring_series_at":["input"],"sync":["allow_mass_delete"],"sync_preview":[],"update_event":["input"]}', 'config':'{"get_auto_sync_enabled":[],"get_notifications_enabled":[],"get_theme":[],"set_auto_sync_enabled":["enabled"],"set_notifications_enabled":["enabled"],"set_theme":["theme"]}', 'omarchy':'{"get_colors":[]}', 'platform':'{"needs_native_decorations":[],"set_tray_pending":["pending"]}' }
 export type Router = { "caldir": {check_provider_connection: (providerName: string, account: string) => Promise<null>, 
 connect_provider: (providerName: string) => Promise<Calendar[]>, 
 connect_provider_with_credentials: (providerName: string, credentials: CredentialFieldInput[]) => Promise<Calendar[]>, 
 create_event: (input: CreateEventInput) => Promise<CalendarEvent>, 
+create_event_with_meet: (input: CreateMeetEventInput) => Promise<string>, 
 create_local_calendar: (name: string, color: string | null) => Promise<Calendar>, 
 delete_event: (calendarSlug: string, eventId: string) => Promise<null>, 
 delete_recurring_series: (calendarSlug: string, uid: string) => Promise<null>, 
@@ -113,15 +154,23 @@ get_default_reminders: () => Promise<number[]>,
 get_event: (calendarSlug: string, eventId: string) => Promise<CalendarEvent | null>, 
 get_provider_connect_info: (providerName: string) => Promise<ProviderConnectInfo>, 
 get_time_format: () => Promise<TimeFormat>, 
+google_meet_connect: () => Promise<null>, 
+google_meet_disconnect: () => Promise<null>, 
+google_meet_status: () => Promise<GoogleMeetStatus>, 
 list_calendars: () => Promise<Calendar[]>, 
 list_events: (calendarSlugs: string[], start: string, end: string) => Promise<CalendarEvent[]>, 
 list_invites: (calendarSlugs: string[]) => Promise<CalendarEvent[]>, 
 list_providers: () => Promise<string[]>, 
+remove_account: (account: string) => Promise<null>, 
 rsvp: (calendarSlug: string, eventId: string, response: string) => Promise<null>, 
 search_events: (calendarSlugs: string[], query: string) => Promise<CalendarEvent[]>, 
+search_google_contacts: (query: string) => Promise<GoogleContact[]>, 
+search_places: (query: string) => Promise<string[]>, 
 set_calendar_dir: (path: string) => Promise<null>, 
 set_default_calendar: (slug: string | null) => Promise<null>, 
 set_default_reminders: (minutes: number[]) => Promise<null>, 
+set_google_features: (meetEnabled: boolean, contactsEnabled: boolean) => Promise<null>, 
+set_google_meet_credentials: (clientId: string, clientSecret: string) => Promise<null>, 
 set_time_format: (timeFormat: TimeFormat) => Promise<null>, 
 split_recurring_series_at: (input: SplitRecurringSeriesInput) => Promise<CalendarEvent>, 
 sync: (allowMassDelete: string[]) => Promise<null>, 
@@ -134,7 +183,8 @@ set_auto_sync_enabled: (enabled: boolean) => Promise<null>,
 set_notifications_enabled: (enabled: boolean) => Promise<null>, 
 set_theme: (theme: string) => Promise<null>},
 "omarchy": {get_colors: () => Promise<OmarchyColors | null>},
-"platform": {needs_native_decorations: () => Promise<boolean>} };
+"platform": {needs_native_decorations: () => Promise<boolean>, 
+set_tray_pending: (pending: boolean) => Promise<void>} };
 
 
 export const createTauRPCProxy = () => createProxy<Router>(ARGS_MAP)

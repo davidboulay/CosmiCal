@@ -3,44 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>renCal</title>
-    <style>
-      /* Flash-prevention before CSS loads. Add a rule per theme when
-         registering new themes in src/themes/manifest.ts. */
-      body[data-theme="classic"],
-      body:not([data-theme])[data-default-theme="classic"] {
-        background-color: #1a1b26;
-      }
-      body[data-theme="ren"],
-      body:not([data-theme])[data-default-theme="ren"] {
-        background-color: #131313;
-      }
-      body[data-theme="omarchy"],
-      body:not([data-theme])[data-default-theme="omarchy"] {
-        background-color: #1a1b26;
-      }
-    </style>
+    <title>CosmiCal</title>
   </head>
 
-  <body data-default-theme="ren">
+  <body data-default-theme="cosmic-light">
     <script>
-      // Restore persisted theme before React mounts to avoid a flash
-      const DEFAULT_THEME = document.body.dataset.defaultTheme || "ren"
-      try {
-        document.body.dataset.theme = JSON.parse(localStorage.getItem("theme")) || DEFAULT_THEME
-      } catch {
-        document.body.dataset.theme = DEFAULT_THEME
+      // Restore persisted theme and paint its background before React/CSS load,
+      // to avoid a flash. THEME_BG is generated from the theme palettes
+      // (scripts/gen-themes.mjs); keep it in sync when themes change.
+      const THEME_BG = {
+        "cosmic-light": "#E3D5C5",
+        "black-pearl": "#080c12",
+        "catppuccin-latte-lavender": "#eff1f5",
+        "catppuccin-macchiato-green": "#24273a",
+        "catppuccin-macchiato-lavender": "#24273a",
+        "catppuccin-mocha-sky": "#1e1e2e",
+        "cosmic-aero": "#262b30",
+        "cosmic-cyberpunk-setting-theme": "#000000",
+        cosmicwaita: "#ffffff",
+        "dark-liquid-glass": "#080c12",
+        "dracula-purple": "#282a36",
+        dracula: "#282a36",
+        dusklight: "#070921",
+        "eientei-dark-red": "#1b1b1b",
+        elysium: "#1f2937",
+        "everforest-medium": "#2d353b",
+        everforest: "#272e33",
+        "fedora-light": "#edeff3",
+        "flexoki-dark": "#100f0f",
+        "gnome-adwaita-dark": "#1e1e1e",
+        gotham: "#0c1014",
+        "gruvbox-dark": "#282828",
+        "gruvbox-light": "#fbf1c7",
+        "gruvbox-material-dark": "#282828",
+        "hacker-s-green": "#000000",
+        "hot-iron": "#1f0c0c",
+        "hp-dev-one": "#000b11",
+        kanagawa: "#16161d",
+        nature: "#071007",
+        "nord-dark": "#2e3440",
+        "nord-light": "#eceff4",
+        "nordic-dark": "#2e3440",
+        obsidian: "#130c1f",
+        "ocean-dark": "#0c1016",
+        "one-dark": "#20252c",
+        "one-light": "#eaeaeb",
+        "pop-classic-dark": "#353535",
+        protest: "#000000",
+        "rose-pine": "#191724",
+        "solarized-dark": "#002b36",
+        "solarized-light": "#fdf6e3",
+        spotify: "#050505",
+        "steam-classic": "#4c5844",
+        stone: "#131213",
+        synthwave84: "#171529",
+        "system76-light": "#f6f6f6",
+        tokyonight: "#1a1b26",
+        "ubuntu-light": "#f3f5f2",
+        "windows-95": "#c0c0c0",
       }
-      // For the Omarchy theme, apply the last-known background from cache so the
-      // flash-prevention rule above doesn't paint a stale color while React boots.
-      if (document.body.dataset.theme === "omarchy") {
-        try {
-          const cached = JSON.parse(localStorage.getItem("omarchyColors"))
-          if (cached && cached.background) {
-            document.body.style.setProperty("--background", cached.background)
-            document.documentElement.style.backgroundColor = cached.background
-          }
-        } catch {}
+      const DEFAULT_THEME = document.body.dataset.defaultTheme || "cosmic-light"
+      let theme = DEFAULT_THEME
+      try {
+        theme = JSON.parse(localStorage.getItem("theme")) || DEFAULT_THEME
+      } catch {}
+      document.body.dataset.theme = theme
+      const bg = THEME_BG[theme] || THEME_BG[DEFAULT_THEME]
+      if (bg) {
+        document.body.style.backgroundColor = bg
+        document.documentElement.style.backgroundColor = bg
       }
     </script>
     <div id="root"></div>

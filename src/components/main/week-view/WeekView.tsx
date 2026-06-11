@@ -13,7 +13,7 @@ import { formatDateKey } from "@/lib/event-time"
 
 import { WeekTimeGrid } from "./WeekTimeGrid"
 
-export function WeekView() {
+export function WeekView({ visibleDays = 7 }: { visibleDays?: number } = {}) {
   const { calendars } = useCalendars()
   const { activeDate, navigateToDate } = useCalendarNavigation()
   const { calendarEvents, toggleActiveEventKey, activeEvent } = useCalEvents()
@@ -40,6 +40,7 @@ export function WeekView() {
         onEventClick={toggleActiveEventKey}
         draftEvent={draftCalEvent}
         dimmed={dimmed}
+        visibleDays={visibleDays}
       />
     </div>
   )

@@ -31,10 +31,70 @@ pub(super) async fn handler(
             })
             .collect();
 
-        for event in expand_in_range(parsed.iter().cloned(), range_start, range_end) {
-            if !is_visible(&event) {
-                continue;
+        // Authoritative override per occurrence, taken from the RAW parsed
+        // events and keyed by UTC instant. `expand_in_range` matches overrides
+        // by their timezone *representation*, so when a series is recreated or
+        // timezone-migrated on the server the leftover copy stops matching the
+        // new master and is silently dropped — leaving the stale copy to win
+        // and show wrong attendee/RSVP statuses. Per RFC 5545 the authoritative
+        // version is the highest SEQUENCE (tie-break: most recently modified);
+        // we recover it here by instant.
+        let occurrence_key = |e: &caldir_core::Event| -> Option<(String, i64)> {
+            e.recurrence_id
+                .as_ref()
+                .map(|r| (e.uid.as_str().to_string(), r.as_event_time().to_utc().timestamp_millis()))
+        };
+        let mut authoritative: HashMap<(String, i64), caldir_core::Event> = HashMap::new();
+        for ev in parsed.iter() {
+            let Some(key) = occurrence_key(ev) else { continue };
+            let better = match authoritative.get(&key) {
+                Some(cur) => (ev.sequence, ev.last_modified) > (cur.sequence, cur.last_modified),
+                None => true,
+            };
+            if better {
+                authoritative.insert(key, ev.clone());
             }
+        }
+
+        let mut by_occurrence: HashMap<(String, i64), caldir_core::Event> = HashMap::new();
+        let mut singles: Vec<caldir_core::Event> = Vec::new();
+        for event in expand_in_range(parsed.iter().cloned(), range_start, range_end) {
+            match occurrence_key(&event) {
+                Some(key) => {
+                    // Prefer the authoritative override when it outranks what
+                    // expansion produced for this occurrence.
+                    let chosen = match authoritative.get(&key) {
+                        Some(auth)
+                            if (auth.sequence, auth.last_modified)
+                                > (event.sequence, event.last_modified) =>
+                        {
+                            auth.clone()
+                        }
+                        _ => event,
+                    };
+                    if !is_visible(&chosen) {
+                        continue;
+                    }
+                    let wins = match by_occurrence.get(&key) {
+                        Some(cur) => {
+                            (chosen.sequence, chosen.last_modified)
+                                > (cur.sequence, cur.last_modified)
+                        }
+                        None => true,
+                    };
+                    if wins {
+                        by_occurrence.insert(key, chosen);
+                    }
+                }
+                None => {
+                    if is_visible(&event) {
+                        singles.push(event)
+                    }
+                }
+            }
+        }
+
+        for event in singles.into_iter().chain(by_occurrence.into_values()) {
             let master_rec = master_recurrences.get(event.uid.as_str()).cloned();
             events.push(CalendarEvent::from_event(&event, slug, master_rec));
         }

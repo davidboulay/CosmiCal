@@ -206,6 +206,9 @@ export const EditEvent = ({
           setDirtyEvent({ ...dirtyEvent, attendees: newAttendees })
         }}
         conferenceUrl={dirtyEvent.conference_url}
+        onConferenceUrlChange={(url) => {
+          setDirtyEvent({ ...dirtyEvent, conference_url: url.trim() || null })
+        }}
         recurrence={recurrenceRRule}
         onRecurrenceChange={handleRecurrenceChange}
         reminders={dirtyEvent.reminders}

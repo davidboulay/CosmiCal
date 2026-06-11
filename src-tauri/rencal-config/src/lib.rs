@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 fn default_theme() -> String {
-    "ren".to_string()
+    "cosmic-light".to_string()
 }
 
 fn default_notifications_enabled() -> bool {
@@ -17,6 +17,10 @@ fn default_notifications_enabled() -> bool {
 }
 
 fn default_auto_sync_enabled() -> bool {
+    true
+}
+
+fn default_true() -> bool {
     true
 }
 
@@ -28,6 +32,20 @@ pub struct RencalConfig {
     pub notifications_enabled: bool,
     #[serde(default = "default_auto_sync_enabled")]
     pub auto_sync_enabled: bool,
+    /// Google OAuth client (Desktop) used for creating Google Meet links via the
+    /// Calendar REST API. The user supplies their own client; the refresh token
+    /// is obtained via a one-time consent. All optional (feature is off until set).
+    #[serde(default)]
+    pub google_meet_client_id: Option<String>,
+    #[serde(default)]
+    pub google_meet_client_secret: Option<String>,
+    #[serde(default)]
+    pub google_meet_refresh_token: Option<String>,
+    /// Per-feature toggles for the connected Google account (both on by default).
+    #[serde(default = "default_true")]
+    pub google_meet_enabled: bool,
+    #[serde(default = "default_true")]
+    pub google_contacts_enabled: bool,
 }
 
 impl Default for RencalConfig {
@@ -36,6 +54,11 @@ impl Default for RencalConfig {
             theme: default_theme(),
             notifications_enabled: default_notifications_enabled(),
             auto_sync_enabled: default_auto_sync_enabled(),
+            google_meet_client_id: None,
+            google_meet_client_secret: None,
+            google_meet_refresh_token: None,
+            google_meet_enabled: true,
+            google_contacts_enabled: true,
         }
     }
 }

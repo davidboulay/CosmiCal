@@ -31,6 +31,9 @@ export const EventDotsProvider = EventDotsContext.Provider
 // Weekday short names indexed by day number (0=Sun … 6=Sat)
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const
 
+/** Maximum number of event dots rendered under a single day cell. */
+const MAX_DAY_DOTS = 3
+
 function Calendar({
   className,
   classNames,
@@ -267,10 +270,15 @@ const CalendarDayButton = memo(function CalendarDayButton({
       data-range-middle={modifiers.range_middle}
       data-today={modifiers.today}
       className={cn(
-        "data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground flex w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 p-2 size-[38px] rounded-circle! text-sm",
+        "data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground flex w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70 p-2 size-[38px] rounded-lg! text-sm",
         defaultClassNames.day,
-        "data-[selected-single=true]:bg-accent! data-[selected-single=true]:font-bold! data-[selected-single=true]:text-lg!", // selected day
-        "data-[today=true]:text-today data-[today=true]:data-[selected-single=true]:bg-today! data-[today=true]:data-[selected-single=true]:text-primary-foreground", // today
+        // selected day: full square covering the whole cell (theme radius)
+        "data-[selected-single=true]:bg-accent! data-[selected-single=true]:rounded-lg! data-[selected-single=true]:font-bold! data-[selected-single=true]:text-lg!",
+        // today: persistent strong marker (inset ring in the today color) that stays
+        // visible even when another day is selected and is distinct from the selection fill
+        "data-[today=true]:font-bold data-[today=true]:text-today data-[today=true]:ring-2 data-[today=true]:ring-inset data-[today=true]:ring-today",
+        // today + selected: fill with today color, keep the ring as the persistent marker
+        "data-[today=true]:data-[selected-single=true]:bg-today! data-[today=true]:data-[selected-single=true]:text-primary-foreground",
         className,
       )}
       {...props}
@@ -279,7 +287,7 @@ const CalendarDayButton = memo(function CalendarDayButton({
       {children}
       {dotColors && dotColors.length > 0 && (
         <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-[3px]">
-          {dotColors.map((color, i) => (
+          {dotColors.slice(0, MAX_DAY_DOTS).map((color, i) => (
             <div key={i} className="size-1 rounded-circle" style={{ backgroundColor: color }} />
           ))}
         </div>

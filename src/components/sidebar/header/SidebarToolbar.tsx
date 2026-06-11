@@ -21,6 +21,7 @@ export function SidebarToolbar() {
       })}
     >
       <InvitesBadge persistent />
+      <SyncStatus />
 
       <DragRegion className="grow" />
 
@@ -28,7 +29,6 @@ export function SidebarToolbar() {
 
       {!isMd && (
         <div className="flex gap-2 items-center">
-          <SyncStatus />
           <SettingsButton />
 
           <div className="w-10" />

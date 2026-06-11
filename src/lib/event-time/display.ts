@@ -25,7 +25,7 @@ const timeFormatters: Partial<Record<TimeFormat, Intl.DateTimeFormat>> = {}
 function getTimeFormatter(timeFormat: TimeFormat): Intl.DateTimeFormat {
   let f = timeFormatters[timeFormat]
   if (!f) {
-    f = new Intl.DateTimeFormat(timeFormat === "12h" ? "en-US" : "en-GB", {
+    f = new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hourCycle: timeFormat === "12h" ? "h12" : "h23",
@@ -47,7 +47,7 @@ function getZonedTimeFormatter(timeFormat: TimeFormat, tzid: string): Intl.DateT
   const key = `${timeFormat}|${tzid}`
   let f = zonedTimeFormatters[key]
   if (!f) {
-    f = new Intl.DateTimeFormat(timeFormat === "12h" ? "en-US" : "en-GB", {
+    f = new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hourCycle: timeFormat === "12h" ? "h12" : "h23",

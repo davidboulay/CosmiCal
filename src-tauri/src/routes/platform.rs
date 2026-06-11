@@ -42,6 +42,7 @@ pub fn needs_native_decorations() -> bool {
 #[taurpc::procedures(path = "platform", export_to = "../src/rpc/bindings.ts")]
 pub trait PlatformApi {
     async fn needs_native_decorations() -> bool;
+    async fn set_tray_pending(pending: bool);
 }
 
 #[derive(Clone)]
@@ -51,5 +52,8 @@ pub struct PlatformApiImpl;
 impl PlatformApi for PlatformApiImpl {
     async fn needs_native_decorations(self) -> bool {
         needs_native_decorations()
+    }
+    async fn set_tray_pending(self, pending: bool) {
+        crate::tray::set_pending(pending);
     }
 }

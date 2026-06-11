@@ -12,8 +12,18 @@ import { getEventBlockClasses, getEventBlockColors, getEventBlockStyle } from "@
 import { formatTime } from "@/lib/event-time"
 import { cn } from "@/lib/utils"
 
+// Single, constant font for every timed block — we adapt the *layout* (one line
+// vs. time + multi-line title) to the available height rather than scaling type.
+const LINE_PX = 16 // text-xs line height (leading-tight)
+const PAD_PX = 4 // vertical padding inside the block
+const MIN_BLOCK_PX = 16
+// Below this height there's no room for a separate time line, so the start time
+// shares one line with the (truncated) title.
+const TWO_LINE_MIN_PX = 2 * LINE_PX + PAD_PX
+
 function WeekTimedEventImpl({
   layout,
+  hourHeight,
   highlighted: highlightedByParent,
   isPending,
   isDeclined,
@@ -22,6 +32,7 @@ function WeekTimedEventImpl({
   onEventClick,
 }: {
   layout: WeekTimedEventLayout
+  hourHeight: number
   highlighted: boolean
   isPending: boolean
   isDeclined: boolean
@@ -39,7 +50,6 @@ function WeekTimedEventImpl({
   const leftPercent = layout.column * CASCADE_OFFSET_PCT
   const widthPercent = 100 - leftPercent
 
-  const isDashed = isPending || isDeclined
   const highlighted = highlightedByParent || contextOpen
 
   const colors = getEventBlockColors({
@@ -47,15 +57,21 @@ function WeekTimedEventImpl({
     eventColor: layout.event.color,
     highlighted,
     isDraft,
-    isDashed,
   })
 
-  const mode = layout.displayMode
-  const hasStripe = !isDashed && !isDraft
+  // Declined/pending keep the normal filled look (with the colored accent bar);
+  // declined adds a zebra overlay and pending is rendered semi-transparent.
+  const hasStripe = !isDraft
 
   const summary = layout.event.summary || <UntitledEventText />
   const startTime = formatTime(layout.event.start, timeFormat)
-  const endTime = formatTime(layout.event.end, timeFormat)
+
+  // Decide the layout from the block's actual rendered height (duration × the
+  // current hour height), not just its duration — so a short block at any zoom
+  // never clips text mid-line. Font size stays constant in all cases.
+  const blockPx = Math.max(MIN_BLOCK_PX, (layout.durationMinutes / 60) * hourHeight)
+  const oneLine = blockPx < TWO_LINE_MIN_PX
+  const titleLines = Math.max(1, Math.floor((blockPx - PAD_PX - LINE_PX) / LINE_PX))
 
   const inner = (
     <div
@@ -79,8 +95,9 @@ function WeekTimedEventImpl({
           calendarColor: layout.calendarColor,
           eventColor: layout.event.color,
           highlighted,
-          isDashed,
           isDraft,
+          isDeclined,
+          isPending,
         }),
       }}
       onClick={
@@ -100,33 +117,27 @@ function WeekTimedEventImpl({
         />
       )}
 
-      {mode === "xs" ? (
-        <div>
-          {/* Too short for the time — title only, truncated with an ellipsis */}
-          <div className="truncate font-medium text-[10px] leading-tight">{summary}</div>
-        </div>
-      ) : mode === "sm" ? (
-        <div>
-          {/* Title + time on separate lines at a reduced font size */}
-          <div className="truncate font-medium text-[10px] leading-tight">{summary}</div>
-          <div className="truncate text-[10px] opacity-80 leading-tight">
-            {startTime} – {endTime}
-          </div>
-        </div>
-      ) : mode === "md" ? (
-        <div className="py-0.5">
-          {/* Title + time on separate lines, normal font, title on one line */}
-          <div className="truncate font-medium leading-tight">{summary}</div>
-          <div className="truncate opacity-80 leading-tight">
-            {startTime} – {endTime}
-          </div>
+      {oneLine ? (
+        // Not enough height for two lines: start time + the beginning of the
+        // title on a single line, ellipsised if it overflows.
+        <div className="flex items-baseline gap-1 overflow-hidden text-xs leading-tight">
+          <span className="shrink-0 opacity-80">{startTime}</span>
+          <span className="truncate font-semibold">{summary}</span>
         </div>
       ) : (
-        <div className="py-0.5">
-          {/* Title = up to 2 lines, time = 1 line, with padding */}
-          <div className="font-medium leading-tight line-clamp-2">{summary}</div>
-          <div className="truncate opacity-80 leading-tight">
-            {startTime} – {endTime}
+        // Start time on its own line, then the title across as many lines as
+        // fit (computed from the block height), ellipsised at the last line.
+        <div className="py-0.5 text-xs leading-tight overflow-hidden">
+          <div className="opacity-80">{startTime}</div>
+          <div
+            className="font-semibold overflow-hidden"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: titleLines,
+            }}
+          >
+            {summary}
           </div>
         </div>
       )}

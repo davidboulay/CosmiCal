@@ -47,10 +47,10 @@ export function MonthTimedEvent({
       className={cn(
         "flex items-center gap-1 text-xs truncate cursor-default hover:bg-hover rounded shrink-0",
         highlighted && "bg-accent!",
-        (isPending || isDeclined) && "opacity-50",
+        // Declined (rejected): semi-transparent + strikethrough.
+        isDeclined && "opacity-50 line-through",
         !isDraft && dimmed && "opacity-50",
         isDraft && "font-medium border border-dashed",
-        isDeclined && "line-through",
       )}
       style={
         isDraft
@@ -59,7 +59,12 @@ export function MonthTimedEvent({
               borderColor: colors.borderColor,
               color: colors.textColor,
             }
-          : undefined
+          : isPending
+            ? {
+                // No reply yet (needs-action): zebra/striped pattern in the event's color.
+                backgroundImage: `repeating-linear-gradient(45deg, color-mix(in srgb, ${colors.borderColor} 30%, transparent) 0, color-mix(in srgb, ${colors.borderColor} 30%, transparent) 4px, transparent 4px, transparent 8px)`,
+              }
+            : undefined
       }
       onClick={
         isDraft

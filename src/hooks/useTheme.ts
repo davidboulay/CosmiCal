@@ -7,9 +7,7 @@ import { rpc } from "@/rpc"
 import { THEME_CHANGED } from "@/rpc/events"
 
 import { useLocalStorage } from "@/hooks/useLocalStorage"
-import { useOmarchyTheme } from "@/hooks/useOmarchyTheme"
 
-import { getActiveAppearance } from "@/themes/appearance"
 import { THEME_IDS, type ThemeId } from "@/themes/manifest"
 
 const themeSchema = z.enum(THEME_IDS)
@@ -33,14 +31,10 @@ export function useTheme() {
 
   useEffect(() => {
     document.body.dataset.theme = theme
-    // Sync OS window chrome (macOS titlebar text, Windows DWM chrome) to the
-    // theme's light/dark appearance. For omarchy this depends on the
-    // dynamically-injected --background, which may not be applied yet on
-    // first mount; useOmarchyTheme re-syncs once colors arrive.
-    void getCurrentWindow().setTheme(getActiveAppearance(theme))
+    // Window chrome (titlebar / DWM / GTK CSD) follows the OS light/dark
+    // setting — like a native COSMIC app — independent of the in-app theme.
+    void getCurrentWindow().setTheme(null)
   }, [theme])
-
-  useOmarchyTheme()
 
   // Reconcile with TOML on mount; migrate cached value up if no file yet.
   useEffect(() => {
@@ -49,21 +43,8 @@ export function useTheme() {
       if (cancelled) return
       if (toml === null) {
         // First run with this build: persist whatever the cache holds so the
-        // file exists and future reads are unambiguous. On a truly fresh
-        // install (no prior localStorage either), default to omarchy when
-        // detected on disk so Omarchy users see their OS theme out of the box.
-        let initial = themeRef.current
-        const hadCachedTheme = localStorage.getItem("theme") !== null
-        if (!hadCachedTheme) {
-          try {
-            const colors = await rpc.omarchy.get_colors()
-            if (cancelled) return
-            if (colors) {
-              initial = "omarchy"
-              setThemeLocal(initial)
-            }
-          } catch {}
-        }
+        // file exists and future reads are unambiguous.
+        const initial = themeRef.current
         void rpc.config.set_theme(initial)
         return
       }

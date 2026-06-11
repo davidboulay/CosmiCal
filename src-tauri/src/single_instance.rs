@@ -49,12 +49,17 @@ fn socket_path() -> PathBuf {
 
 /// Either acquire the single-instance role (returning a guard + listener),
 /// or signal the existing instance and return `None` so the caller can exit.
-pub fn try_acquire_or_signal() -> Option<InstanceGuard> {
+///
+/// `message` is what we send to an already-running instance: `"focus"` for a
+/// plain re-launch, or `"open\t<token>"` when launched with `--open-event=` so
+/// the running app jumps to that event.
+pub fn try_acquire_or_signal(message: &str) -> Option<InstanceGuard> {
     let path = socket_path();
 
-    // Existing instance? Send focus and bail.
+    // Existing instance? Send the message and bail.
     if let Ok(mut stream) = UnixStream::connect(&path) {
-        let _ = stream.write_all(b"focus\n");
+        let _ = stream.write_all(message.as_bytes());
+        let _ = stream.write_all(b"\n");
         return None;
     }
 
@@ -79,12 +84,15 @@ pub fn try_acquire_or_signal() -> Option<InstanceGuard> {
     }
 }
 
-/// Spawn a thread that listens for `focus\n` messages and invokes `on_focus`
-/// for each. Consumes the listener out of the guard; the guard still holds
-/// the path so cleanup on Drop still works.
-pub fn spawn_listener<F>(guard: &mut InstanceGuard, on_focus: F)
+/// Spawn a thread that listens for messages from secondary launches and
+/// dispatches them. `"focus"` invokes `on_focus`; `"open\t<token>"` invokes
+/// `on_open(token)` (the app should focus and jump to that event).
+/// Consumes the listener out of the guard; the guard still holds the path so
+/// cleanup on Drop still works.
+pub fn spawn_listener<F, G>(guard: &mut InstanceGuard, on_focus: F, on_open: G)
 where
     F: Fn() + Send + 'static,
+    G: Fn(String) + Send + 'static,
 {
     let Some(listener) = guard.listener.take() else {
         return;
@@ -94,7 +102,10 @@ where
             let Ok(mut stream) = incoming else { continue };
             let mut buf = String::new();
             let _ = stream.read_to_string(&mut buf);
-            if buf.trim() == "focus" {
+            let msg = buf.trim();
+            if let Some(token) = msg.strip_prefix("open\t") {
+                on_open(token.to_string());
+            } else if msg == "focus" {
                 on_focus();
             }
         }

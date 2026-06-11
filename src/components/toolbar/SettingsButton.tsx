@@ -9,15 +9,8 @@ import { rpc } from "@/rpc"
 import { isMacOS } from "@/lib/utils"
 
 import { SettingsIcon } from "@/icons/settings"
-import { getActiveAppearance } from "@/themes/appearance"
-import { THEME_IDS, type ThemeId } from "@/themes/manifest"
 
-function activeThemeId(): ThemeId {
-  const id = document.body.dataset.theme
-  return (THEME_IDS as readonly string[]).includes(id ?? "") ? (id as ThemeId) : THEME_IDS[0]
-}
-
-export async function openSettingsWindow() {
+export async function openSettingsWindow(tab?: string) {
   const existing = await WebviewWindow.getByLabel("settings")
   if (existing) {
     await existing.setFocus()
@@ -32,19 +25,15 @@ export async function openSettingsWindow() {
   const screenH = (monitor?.size.height ?? height) / scale
   const needsNative = await rpc.platform.needs_native_decorations()
 
-  const appearance = getActiveAppearance(activeThemeId())
-
   new WebviewWindow("settings", {
-    url: "/?appWindow=settings",
+    url: `/?appWindow=settings${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`,
     title: "Settings",
     titleBarStyle: isMacOS ? "overlay" : undefined,
     width,
     height,
     resizable: false,
     decorations: isMacOS || needsNative,
-    // Match OS chrome to the app theme: macOS titlebar text color,
-    // Windows DWM immersive light/dark. GTK is handled globally in lib.rs.
-    theme: appearance,
+    // Window chrome follows the OS light/dark setting (theme omitted = system).
     x: Math.round((screenW - width) / 2),
     y: Math.round((screenH - height) / 2),
     parent: getCurrentWindow(),
