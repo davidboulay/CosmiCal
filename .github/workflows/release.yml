@@ -46,10 +46,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-latest
-            rust-target: aarch64-apple-darwin
-            caldir-target: aarch64-apple-darwin
-            tauri-args: --target aarch64-apple-darwin
           - runner: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
             caldir-target: x86_64-unknown-linux-musl
@@ -125,23 +121,6 @@ jobs:
           chmod +x src-tauri/providers/caldir-provider-*
           rm caldir-release.tar.gz
 
-      - name: Import Apple signing certificate
-        if: matrix.runner == 'macos-latest'
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-
-      - name: Pre-sign bundled provider binaries
-        if: matrix.runner == 'macos-latest'
-        working-directory: rencal
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: |
-          for bin in src-tauri/providers/caldir-provider-*; do
-            codesign --sign "$APPLE_SIGNING_IDENTITY" --timestamp --options runtime --force "$bin"
-          done
-
       # Build the standalone reminder daemon so tauri-action can pick it up
       # via bundle.linux.{deb,rpm}.files. Linux only — macOS/Windows run the
       # reminder loop in-process via tauri-plugin-notification.
@@ -154,12 +133,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NO_STRIP: "true"
         with:
           projectPath: rencal
