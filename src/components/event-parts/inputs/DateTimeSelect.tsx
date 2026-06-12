@@ -2,7 +2,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { InputGroupAddon } from "@/components/ui/input-group"
 
 import {
-  dateInEventZone,
+  dateInViewerZone,
   displayEndDate,
   isAllDay,
   localDateToPlainDate,
@@ -71,7 +71,7 @@ export const DateTimeSelect = ({
         />
       )}
       <DateSelect
-        startDate={plainDateToLocalDate(dateInEventZone(start))}
+        startDate={plainDateToLocalDate(dateInViewerZone(start))}
         endDate={plainDateToLocalDate(displayEndDate({ start, end }))}
         showEndDate={shouldShowDisplayEndDate({ start, end })}
         readOnly={readOnly}

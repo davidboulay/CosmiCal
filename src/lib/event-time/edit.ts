@@ -92,6 +92,77 @@ export function wallclockTime(et: EventTime): { hour: number; minute: number } {
 }
 
 /**
+ * The wallclock hour/minute in the viewer's local zone (not the event's own
+ * zone). Used by the event editor so the primary time always reads in local
+ * time, even for events stored with an explicit foreign timezone. All-day
+ * events return 00:00.
+ */
+export function wallclockTimeInViewer(et: EventTime): { hour: number; minute: number } {
+  if (et.kind === "date") return { hour: 0, minute: 0 }
+  const z = toViewerZonedDateTime(et)
+  return { hour: z.hour, minute: z.minute }
+}
+
+/**
+ * Replace the wallclock hour/minute interpreted in the viewer's local zone,
+ * keeping the event's stored zone identity (the instant shifts to match the
+ * picked local time). For all-day events this is a no-op.
+ */
+export function withViewerWallclockTime(et: EventTime, hour: number, minute: number): EventTime {
+  switch (et.kind) {
+    case "date":
+      return et
+    case "datetime_zoned": {
+      const tz = et.value.timeZoneId
+      const local = toViewerZonedDateTime(et).with({ hour, minute, second: 0, millisecond: 0 })
+      return { kind: "datetime_zoned", value: local.withTimeZone(tz) }
+    }
+    case "datetime_floating":
+      return {
+        kind: "datetime_floating",
+        value: et.value.with({ hour, minute, second: 0, millisecond: 0 }),
+      }
+    case "datetime_utc": {
+      const z = toViewerZonedDateTime(et).with({ hour, minute, second: 0, millisecond: 0 })
+      return { kind: "datetime_utc", value: z.toInstant() }
+    }
+  }
+}
+
+/**
+ * Replace the calendar date as seen in the viewer's local zone, keeping the
+ * event's stored zone identity and wallclock time.
+ */
+export function withViewerDate(et: EventTime, newDate: Temporal.PlainDate): EventTime {
+  switch (et.kind) {
+    case "date":
+      return allDayDate(newDate)
+    case "datetime_zoned": {
+      const tz = et.value.timeZoneId
+      const local = toViewerZonedDateTime(et).with({
+        year: newDate.year,
+        month: newDate.month,
+        day: newDate.day,
+      })
+      return { kind: "datetime_zoned", value: local.withTimeZone(tz) }
+    }
+    case "datetime_floating":
+      return {
+        kind: "datetime_floating",
+        value: et.value.with({ year: newDate.year, month: newDate.month, day: newDate.day }),
+      }
+    case "datetime_utc": {
+      const z = toViewerZonedDateTime(et).with({
+        year: newDate.year,
+        month: newDate.month,
+        day: newDate.day,
+      })
+      return { kind: "datetime_utc", value: z.toInstant() }
+    }
+  }
+}
+
+/**
  * Replace the wallclock hour/minute in the event's own zone, preserving zone
  * identity. For all-day events this is a no-op.
  */

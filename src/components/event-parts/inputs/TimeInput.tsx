@@ -7,7 +7,12 @@ import type { TimeFormat } from "@/rpc/bindings"
 
 import { useSettings } from "@/contexts/SettingsContext"
 
-import { formatWallclockTime, isAllDay, wallclockTime, type EventTime } from "@/lib/event-time"
+import {
+  formatWallclockTime,
+  isAllDay,
+  wallclockTimeInViewer,
+  type EventTime,
+} from "@/lib/event-time"
 import { cn } from "@/lib/utils"
 
 type TimeOfDay = { hour: number; minute: number }
@@ -83,7 +88,8 @@ function getTimeOptions(query: string, timeFormat: TimeFormat): TimeOfDay[] {
 /**
  * A combobox time input that honors the 12h/24h setting on every locale
  * (unlike a native `<input type="time">`, whose format follows the OS locale).
- * Edits the wallclock time in the event's own zone via `onChange`.
+ * Shows and edits the time in the viewer's local zone via `onChange`, so an
+ * event stored in a foreign timezone still reads in local time.
  */
 export const TimeInput = ({
   value,
@@ -105,7 +111,7 @@ export const TimeInput = ({
   // at the current value's slot, then follows the typed query / pointer.
   const [highlighted, setHighlighted] = useState<string>()
 
-  const { hour, minute } = wallclockTime(value)
+  const { hour, minute } = wallclockTimeInViewer(value)
   const currentLabel = isAllDay(value) ? "" : formatWallclockTime(hour, minute, timeFormat)
   const currentSlotKey = isAllDay(value) ? undefined : nearestSlotKey(hour, minute)
   const options = getTimeOptions(query, timeFormat)

@@ -2,9 +2,9 @@ import { Temporal } from "@js-temporal/polyfill"
 
 import { allDayDate } from "./constructors"
 import { formatDateKey } from "./display"
-import { addDays, addMinutes, dateInEventZone, withEventDate, withWallclockTime } from "./edit"
+import { addDays, addMinutes, withViewerDate, withViewerWallclockTime } from "./edit"
 import { startOfDayMs } from "./layout"
-import { instantForOrdering, isAllDay } from "./projections"
+import { dateInViewerZone, instantForOrdering, isAllDay } from "./projections"
 import type { EventTime, EventTimeRange } from "./types"
 
 /**
@@ -46,7 +46,7 @@ export function withRangeStartWallclockTime(
   hour: number,
   minute: number,
 ): EventTimeRange {
-  const start = withWallclockTime(range.start, hour, minute)
+  const start = withViewerWallclockTime(range.start, hour, minute)
   const deltaMin = Math.round(
     (instantForOrdering(start).epochMilliseconds -
       instantForOrdering(range.start).epochMilliseconds) /
@@ -61,7 +61,7 @@ export function withRangeEndWallclockTime(
   hour: number,
   minute: number,
 ): EventTimeRange {
-  let end = withWallclockTime(range.end, hour, minute)
+  let end = withViewerWallclockTime(range.end, hour, minute)
   if (
     !isAllDay(range.start) &&
     instantForOrdering(end).epochMilliseconds < instantForOrdering(range.start).epochMilliseconds
@@ -75,10 +75,10 @@ export function withRangeStartDate(
   range: EventTimeRange,
   newDate: Temporal.PlainDate,
 ): EventTimeRange {
-  const oldDate = dateInEventZone(range.start)
+  const oldDate = dateInViewerZone(range.start)
   const dayDelta = newDate.since(oldDate, { largestUnit: "days" }).days
   return {
-    start: withEventDate(range.start, newDate),
+    start: withViewerDate(range.start, newDate),
     end: addDays(range.end, dayDelta),
   }
 }
@@ -88,19 +88,19 @@ export function withRangeDisplayEndDate(
   pickedDate: Temporal.PlainDate,
 ): EventTimeRange {
   if (isAllDay(range.start)) {
-    const startDate = dateInEventZone(range.start)
+    const startDate = dateInViewerZone(range.start)
     const clamped = Temporal.PlainDate.compare(pickedDate, startDate) < 0 ? startDate : pickedDate
     return { start: range.start, end: allDayDate(clamped.add({ days: 1 })) }
   }
 
-  return { start: range.start, end: withEventDate(range.end, pickedDate) }
+  return { start: range.start, end: withViewerDate(range.end, pickedDate) }
 }
 
 export function displayEndDate(range: EventTimeRange): Temporal.PlainDate {
-  return dateInEventZone(isAllDay(range.start) ? addDays(range.end, -1) : range.end)
+  return dateInViewerZone(isAllDay(range.start) ? addDays(range.end, -1) : range.end)
 }
 
 export function shouldShowDisplayEndDate(range: EventTimeRange): boolean {
   if (isAllDay(range.start)) return true
-  return !dateInEventZone(range.start).equals(dateInEventZone(range.end))
+  return !dateInViewerZone(range.start).equals(dateInViewerZone(range.end))
 }
