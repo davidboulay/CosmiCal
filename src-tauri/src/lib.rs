@@ -316,11 +316,12 @@ pub async fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Hide the main window instead of closing it so the app keeps
-                // running in the background (e.g. for notifications).
-                // Only applied where no visible close button exists — on
-                // stacking WMs the user expects clicking X to actually quit.
-                if window.label() == "main" && !needs_native_decorations() {
+                // Closing the main window hides it instead of quitting, so the
+                // app keeps running in the background: the tray icon stays and
+                // reminder notifications keep firing. Use the tray's "Quit"
+                // item to exit fully. (Other windows, e.g. Settings, close
+                // normally.)
+                if window.label() == "main" {
                     api.prevent_close();
                     let _ = window.hide();
                 }
