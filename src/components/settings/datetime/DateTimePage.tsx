@@ -50,6 +50,8 @@ const WeatherSection = () => {
     setWeatherEnabled,
     weatherLocation,
     setWeatherLocation,
+    weatherAutoLocation,
+    setWeatherAutoLocation,
     weatherUnit,
     setWeatherUnit,
   } = useSettings()
@@ -57,14 +59,12 @@ const WeatherSection = () => {
   const [status, setStatus] = useState<WeatherStatus>({ state: "idle" })
   const id = useId()
 
-  // Resolve the (possibly newly-typed) location and report what we matched, so
-  // the user can confirm e.g. "Paris, France" and not Paris, US.
-  const update = async () => {
-    const next = location.trim()
-    if (next !== weatherLocation) await setWeatherLocation(next)
+  // Resolve the effective location (auto → IP; manual → typed value) and report
+  // what we matched, so the user can confirm e.g. "Paris, France" not Paris, US.
+  const resolve = async (auto: boolean, manual: string) => {
     clearWeatherCache()
     setStatus({ state: "loading" })
-    const resolved = await resolveWeatherLocation(next)
+    const resolved = await resolveWeatherLocation(auto ? "" : manual.trim())
     setStatus(
       resolved
         ? { state: "ok", label: resolved.label, source: resolved.source }
@@ -72,11 +72,22 @@ const WeatherSection = () => {
     )
   }
 
-  // Show the current location status on open.
+  const updateManual = async () => {
+    const next = location.trim()
+    if (next !== weatherLocation) await setWeatherLocation(next)
+    await resolve(false, next)
+  }
+
+  const changeMode = async (auto: boolean) => {
+    await setWeatherAutoLocation(auto)
+    await resolve(auto, location)
+  }
+
+  // Refresh the shown location on open and whenever the mode flips.
   useEffect(() => {
-    if (weatherEnabled) void update()
+    if (weatherEnabled) void resolve(weatherAutoLocation, weatherLocation)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weatherEnabled])
+  }, [weatherEnabled, weatherAutoLocation])
 
   return (
     <div className="flex flex-col gap-2 w-[400px]">
@@ -92,33 +103,48 @@ const WeatherSection = () => {
         </Label>
       </div>
       <p className="text-xs text-muted-foreground pl-7">
-        Forecast from Open-Meteo (no account needed). Location is detected automatically — set a
-        city or "lat,lon" below if that's wrong.
+        Forecast from Open-Meteo (no account needed).
       </p>
       {weatherEnabled && (
         <div className="flex flex-col gap-3 pl-7">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm">Location</label>
-            <div className="flex gap-2">
-              <Input
-                value={location}
-                ghost={false}
-                placeholder="Auto-detect (e.g. Paris or 48.85,2.35)"
-                className="flex-1"
-                onChange={(e) => setLocation(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void update()
-                }}
-              />
-              <Button
-                variant="secondary"
-                disabled={status.state === "loading"}
-                onClick={() => void update()}
-              >
-                {status.state === "loading" ? "Checking…" : "Update"}
-              </Button>
-            </div>
-            <WeatherStatusLine status={status} />
+            <Select
+              value={weatherAutoLocation ? "auto" : "manual"}
+              onValueChange={(v) => void changeMode(v === "auto")}
+            >
+              <SelectTrigger className="w-full" ghost={false}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto-detect (follows you when travelling)</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {!weatherAutoLocation && (
+              <div className="flex gap-2">
+                <Input
+                  value={location}
+                  ghost={false}
+                  placeholder="City or lat,lon (e.g. Paris or 48.85,2.35)"
+                  className="flex-1"
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void updateManual()
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  disabled={status.state === "loading"}
+                  onClick={() => void updateManual()}
+                >
+                  {status.state === "loading" ? "Checking…" : "Update"}
+                </Button>
+              </div>
+            )}
+
+            <WeatherStatusLine status={status} auto={weatherAutoLocation} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm">Temperature unit</label>
@@ -141,22 +167,28 @@ const WeatherSection = () => {
   )
 }
 
-const WeatherStatusLine = ({ status }: { status: WeatherStatus }) => {
+const WeatherStatusLine = ({ status, auto }: { status: WeatherStatus; auto: boolean }) => {
   if (status.state === "idle") return null
   if (status.state === "loading") {
-    return <span className="text-xs text-muted-foreground">Checking location…</span>
+    return (
+      <span className="text-xs text-muted-foreground">
+        {auto ? "Detecting your location…" : "Checking location…"}
+      </span>
+    )
   }
   if (status.state === "error") {
     return (
       <span className="text-xs text-error">
-        Couldn't find that location — try a different city or use "lat,lon".
+        {auto
+          ? "Couldn't detect your location automatically — switch to Manual and enter a city."
+          : 'Couldn\'t find that location — try a different city or use "lat,lon".'}
       </span>
     )
   }
   return (
     <span className="text-xs text-muted-foreground">
       📍 {status.label}
-      {status.source === "auto" && " (auto-detected)"}
+      {status.source === "auto" && " · auto-detected, refreshes hourly"}
     </span>
   )
 }

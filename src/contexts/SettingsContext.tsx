@@ -59,6 +59,7 @@ function loadTimezoneLabels(): Record<string, string> {
 const WEATHER_ENABLED_KEY = "weatherEnabled"
 const WEATHER_LOCATION_KEY = "weatherLocation"
 const WEATHER_UNIT_KEY = "weatherUnit"
+const WEATHER_AUTO_KEY = "weatherAuto"
 
 export type WeatherUnit = "celsius" | "fahrenheit"
 
@@ -70,6 +71,14 @@ function loadWeatherLocation(): string {
 }
 function loadWeatherUnit(): WeatherUnit {
   return localStorage.getItem(WEATHER_UNIT_KEY) === "fahrenheit" ? "fahrenheit" : "celsius"
+}
+// Auto-detect the location from IP (re-checked hourly, so it follows you when
+// travelling). Defaults on; migrates pre-existing setups where a non-empty
+// manual location implied manual mode.
+function loadWeatherAuto(): boolean {
+  const raw = localStorage.getItem(WEATHER_AUTO_KEY)
+  if (raw !== null) return raw !== "false"
+  return loadWeatherLocation().trim() === ""
 }
 
 // Auto update preference. Persisted in localStorage and synced across windows
@@ -121,6 +130,8 @@ interface SettingsContextType {
   setWeatherEnabled: (enabled: boolean) => Promise<void>
   weatherLocation: string
   setWeatherLocation: (location: string) => Promise<void>
+  weatherAutoLocation: boolean
+  setWeatherAutoLocation: (auto: boolean) => Promise<void>
   weatherUnit: WeatherUnit
   setWeatherUnit: (unit: WeatherUnit) => Promise<void>
   autoUpdate: boolean
@@ -151,6 +162,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     useState<Record<string, string>>(loadTimezoneLabels)
   const [weatherEnabled, setWeatherEnabledState] = useState<boolean>(loadWeatherEnabled)
   const [weatherLocation, setWeatherLocationState] = useState<string>(loadWeatherLocation)
+  const [weatherAutoLocation, setWeatherAutoLocationState] = useState<boolean>(loadWeatherAuto)
   const [weatherUnit, setWeatherUnitState] = useState<WeatherUnit>(loadWeatherUnit)
   const [autoUpdate, setAutoUpdateState] = useState<boolean>(loadAutoUpdate)
   const [allDayVisibleCount, setAllDayVisibleCountState] = useState<number>(loadAllDayVisibleCount)
@@ -210,14 +222,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const unlistenTzLabels = listen<Record<string, string>>(TIMEZONE_LABELS_CHANGED, (event) => {
       setTimezoneLabelsState(event.payload)
     })
-    const unlistenWeather = listen<{ enabled: boolean; location: string; unit: WeatherUnit }>(
-      WEATHER_SETTINGS_CHANGED,
-      (event) => {
-        setWeatherEnabledState(event.payload.enabled)
-        setWeatherLocationState(event.payload.location)
-        setWeatherUnitState(event.payload.unit)
-      },
-    )
+    const unlistenWeather = listen<{
+      enabled: boolean
+      location: string
+      auto: boolean
+      unit: WeatherUnit
+    }>(WEATHER_SETTINGS_CHANGED, (event) => {
+      setWeatherEnabledState(event.payload.enabled)
+      setWeatherLocationState(event.payload.location)
+      setWeatherAutoLocationState(event.payload.auto)
+      setWeatherUnitState(event.payload.unit)
+    })
     const unlistenAutoUpdate = listen<boolean>(AUTO_UPDATE_ENABLED_CHANGED, (event) => {
       setAutoUpdateState(event.payload)
     })
@@ -308,25 +323,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     await emit(TIMEZONE_LABELS_CHANGED, next)
   }
 
-  const emitWeather = (enabled: boolean, location: string, unit: WeatherUnit) =>
-    emit(WEATHER_SETTINGS_CHANGED, { enabled, location, unit })
+  const emitWeather = (enabled: boolean, location: string, auto: boolean, unit: WeatherUnit) =>
+    emit(WEATHER_SETTINGS_CHANGED, { enabled, location, auto, unit })
 
   const setWeatherEnabled = async (enabled: boolean) => {
     setWeatherEnabledState(enabled)
     localStorage.setItem(WEATHER_ENABLED_KEY, String(enabled))
-    await emitWeather(enabled, weatherLocation, weatherUnit)
+    await emitWeather(enabled, weatherLocation, weatherAutoLocation, weatherUnit)
   }
 
   const setWeatherLocation = async (location: string) => {
     setWeatherLocationState(location)
     localStorage.setItem(WEATHER_LOCATION_KEY, location)
-    await emitWeather(weatherEnabled, location, weatherUnit)
+    await emitWeather(weatherEnabled, location, weatherAutoLocation, weatherUnit)
+  }
+
+  const setWeatherAutoLocation = async (auto: boolean) => {
+    setWeatherAutoLocationState(auto)
+    localStorage.setItem(WEATHER_AUTO_KEY, String(auto))
+    await emitWeather(weatherEnabled, weatherLocation, auto, weatherUnit)
   }
 
   const setWeatherUnit = async (unit: WeatherUnit) => {
     setWeatherUnitState(unit)
     localStorage.setItem(WEATHER_UNIT_KEY, unit)
-    await emitWeather(weatherEnabled, weatherLocation, unit)
+    await emitWeather(weatherEnabled, weatherLocation, weatherAutoLocation, unit)
   }
 
   const setAutoUpdate = async (enabled: boolean) => {
@@ -367,6 +388,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWeatherEnabled,
         weatherLocation,
         setWeatherLocation,
+        weatherAutoLocation,
+        setWeatherAutoLocation,
         weatherUnit,
         setWeatherUnit,
         autoUpdate,
