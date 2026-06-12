@@ -25,6 +25,7 @@ mod set_config;
 mod split_recurring_series_at;
 mod sync;
 mod sync_preview;
+mod sync_progress;
 mod update_event;
 
 pub use types::{
@@ -62,9 +63,12 @@ pub trait CaldirApi {
     async fn list_invites(calendar_slugs: Vec<String>) -> TauResult<Vec<CalendarEvent>>;
     async fn rsvp(calendar_slug: String, event_id: String, response: String) -> TauResult<()>;
 
-    async fn sync_preview() -> TauResult<Vec<SyncPreview>>;
+    async fn sync_preview<R: Runtime>(app_handle: AppHandle<R>) -> TauResult<Vec<SyncPreview>>;
 
-    async fn sync(allow_mass_delete: Vec<String>) -> TauResult<()>;
+    async fn sync<R: Runtime>(
+        app_handle: AppHandle<R>,
+        allow_mass_delete: Vec<String>,
+    ) -> TauResult<()>;
 
     async fn discard() -> TauResult<()>;
 
@@ -183,12 +187,16 @@ impl CaldirApi for CaldirApiImpl {
         rsvp::handler(calendar_slug, event_id, response).await
     }
 
-    async fn sync_preview(self) -> TauResult<Vec<SyncPreview>> {
-        sync_preview::handler().await
+    async fn sync_preview<R: Runtime>(self, app_handle: AppHandle<R>) -> TauResult<Vec<SyncPreview>> {
+        sync_preview::handler(app_handle).await
     }
 
-    async fn sync(self, allow_mass_delete: Vec<String>) -> TauResult<()> {
-        sync::handler(allow_mass_delete).await
+    async fn sync<R: Runtime>(
+        self,
+        app_handle: AppHandle<R>,
+        allow_mass_delete: Vec<String>,
+    ) -> TauResult<()> {
+        sync::handler(app_handle, allow_mass_delete).await
     }
 
     async fn discard(self) -> TauResult<()> {

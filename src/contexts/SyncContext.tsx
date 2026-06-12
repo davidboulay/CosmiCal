@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import {
   ReactNode,
@@ -18,6 +19,33 @@ import { useSettings } from "@/contexts/SettingsContext"
 
 const MASS_DELETE_THRESHOLD = 10
 
+/** One calendar's live phase during a reload, mirrored from backend
+ * `sync-progress` events. */
+export type SyncPhase =
+  | "pending"
+  | "checking"
+  | "checked"
+  | "pulling"
+  | "pushing"
+  | "done"
+  | "error"
+
+export interface CalendarSyncStatus {
+  phase: SyncPhase
+  toPull?: number
+  toPush?: number
+  error?: string
+}
+
+/** Shape of the backend `sync-progress` event payload. */
+interface SyncProgressEvent {
+  calendar_slug: string
+  phase: SyncPhase
+  to_pull: number | null
+  to_push: number | null
+  detail: string | null
+}
+
 interface SyncContextType {
   requestSync: () => Promise<void>
   syncNow: () => Promise<void>
@@ -25,6 +53,8 @@ interface SyncContextType {
   isSyncing: boolean
   syncError: string | null
   pendingPreviews: SyncPreview[]
+  /** Per-calendar live status for the in-flight reload, keyed by slug. */
+  calendarStatuses: Record<string, CalendarSyncStatus>
   pendingMassDelete: SyncPreview[] | null
   confirmMassDelete: () => Promise<void>
   discardMassDelete: () => Promise<void>
@@ -45,6 +75,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [pendingPreviews, setPendingPreviews] = useState<SyncPreview[]>([])
+  const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarSyncStatus>>({})
   const [pendingMassDelete, setPendingMassDelete] = useState<SyncPreview[] | null>(null)
   const isSyncingRef = useRef(false)
   // Read in the stable `requestSync` callback so post-edit/post-create calls
@@ -62,6 +93,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       isSyncingRef.current = true
       setIsChecking(true)
       setSyncError(null)
+      // Seed every syncing calendar as "pending"; backend sync-progress events
+      // then advance each one through checking → checked/pulling/pushing → done.
+      setCalendarStatuses(
+        Object.fromEntries(calendarSlugs.map((slug) => [slug, { phase: "pending" as const }])),
+      )
       try {
         const previews = await rpc.caldir.sync_preview()
         const withWork = previews.filter((p) => p.to_push_count > 0 || p.to_pull_count > 0)
@@ -146,6 +182,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     isSyncingRef.current = false
   }, [])
 
+  // Mirror backend per-calendar sync progress into `calendarStatuses` so the
+  // reload status bubble can show what each account is doing live.
+  useEffect(() => {
+    const unlisten = listen<SyncProgressEvent>("sync-progress", ({ payload }) => {
+      setCalendarStatuses((prev) => ({
+        ...prev,
+        [payload.calendar_slug]: {
+          phase: payload.phase,
+          toPull: payload.to_pull ?? undefined,
+          toPush: payload.to_push ?? undefined,
+          error: payload.detail ?? undefined,
+        },
+      }))
+    })
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [])
+
   useEffect(() => {
     if (!settingsLoaded) return
     void runSync(autoSyncEnabled)
@@ -170,6 +225,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       isSyncing,
       syncError,
       pendingPreviews,
+      calendarStatuses,
       pendingMassDelete,
       confirmMassDelete,
       discardMassDelete,
@@ -182,6 +238,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       isSyncing,
       syncError,
       pendingPreviews,
+      calendarStatuses,
       pendingMassDelete,
       confirmMassDelete,
       discardMassDelete,
