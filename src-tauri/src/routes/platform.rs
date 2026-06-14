@@ -45,6 +45,8 @@ pub trait PlatformApi {
     async fn set_tray_pending(pending: bool);
     async fn check_for_update() -> crate::updater::UpdateInfo;
     async fn install_update(deb_url: String) -> Result<(), String>;
+    // Relaunch the app (used after an update installs the new binary).
+    async fn restart_app<R: tauri::Runtime>(app_handle: tauri::AppHandle<R>);
 }
 
 #[derive(Clone)]
@@ -63,5 +65,8 @@ impl PlatformApi for PlatformApiImpl {
     }
     async fn install_update(self, deb_url: String) -> Result<(), String> {
         crate::updater::download_and_install(deb_url).await
+    }
+    async fn restart_app<R: tauri::Runtime>(self, app_handle: tauri::AppHandle<R>) {
+        app_handle.restart();
     }
 }

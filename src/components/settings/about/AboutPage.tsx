@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { useSettings } from "@/contexts/SettingsContext"
 
 import { useUpdateCheck, type UpdateCheckStatus } from "@/hooks/useUpdateCheck"
-import { installUpdate, type UpdateInfo } from "@/lib/updates"
+import { installUpdate, restartApp, type UpdateInfo } from "@/lib/updates"
 
 import { BugIcon } from "@/icons/bug"
 
@@ -96,11 +96,8 @@ const UpdateAvailable = ({ info }: { info: UpdateInfo }) => {
     const id = toast.loading(`Downloading and installing ${info.latestVersion}…`)
     try {
       await installUpdate(info.debUrl)
-      toast.success("Update installed", {
-        id,
-        description: "Restart CosmiCal to finish updating.",
-        duration: 10000,
-      })
+      toast.success("Update installed — restarting…", { id, duration: 3000 })
+      setTimeout(() => void restartApp(), 1500)
     } catch (e) {
       toast.error("Update failed", {
         id,

@@ -4,7 +4,7 @@ import { toast } from "sonner"
 
 import { useSettings } from "@/contexts/SettingsContext"
 
-import { checkForUpdate, installUpdate } from "@/lib/updates"
+import { checkForUpdate, installUpdate, restartApp } from "@/lib/updates"
 
 // Checks for a newer release on launch (when auto-update is on) and surfaces it
 // as a toast with a one-click Install. Renders nothing. The Settings → About
@@ -42,11 +42,8 @@ async function runInstall(debUrl: string, version: string) {
   const id = toast.loading(`Downloading and installing ${version}…`)
   try {
     await installUpdate(debUrl)
-    toast.success("Update installed", {
-      id,
-      description: "Restart CosmiCal to finish updating.",
-      duration: 10000,
-    })
+    toast.success("Update installed — restarting…", { id, duration: 3000 })
+    setTimeout(() => void restartApp(), 1500)
   } catch (e) {
     toast.error("Update failed", {
       id,

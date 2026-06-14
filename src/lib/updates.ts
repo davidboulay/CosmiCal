@@ -81,3 +81,9 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 export async function installUpdate(debUrl: string): Promise<void> {
   await rpc.platform.install_update(debUrl)
 }
+
+/** Relaunch the app into the freshly-installed version. Does not resolve (the
+ * process re-execs). */
+export async function restartApp(): Promise<void> {
+  await rpc.platform.restart_app()
+}
