@@ -30,8 +30,9 @@ export function GeneralPage() {
 }
 
 const StartAtLoginSection = () => {
-  const { startAtLogin, setStartAtLogin } = useSettings()
+  const { startAtLogin, setStartAtLogin, startMinimized, setStartMinimized } = useSettings()
   const id = useId()
+  const minId = useId()
 
   return (
     <div className="flex flex-col gap-2 w-[400px]">
@@ -50,6 +51,19 @@ const StartAtLoginSection = () => {
         Launch CosmiCal automatically when you log in, so reminders and the tray icon are ready in
         the background.
       </p>
+      {startAtLogin && (
+        <div className="flex items-center gap-3 pl-7">
+          <Checkbox
+            id={minId}
+            checked={startMinimized}
+            onCheckedChange={(checked) => void setStartMinimized(checked === true)}
+            className="cursor-pointer"
+          />
+          <Label htmlFor={minId} className="cursor-pointer text-sm">
+            Start minimized to the tray (no window on login)
+          </Label>
+        </div>
+      )}
     </div>
   )
 }

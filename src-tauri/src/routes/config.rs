@@ -20,6 +20,8 @@ pub trait ConfigApi {
         app_handle: AppHandle<R>,
         enabled: bool,
     ) -> TauResult<()>;
+    async fn get_start_minimized() -> TauResult<bool>;
+    async fn set_start_minimized(enabled: bool) -> TauResult<()>;
 }
 
 #[derive(Clone)]
@@ -81,5 +83,15 @@ impl ConfigApi for ConfigApiImpl {
         } else {
             manager.disable().map_err(|e| e.to_string())
         }
+    }
+
+    async fn get_start_minimized(self) -> TauResult<bool> {
+        Ok(RencalConfig::load().start_minimized)
+    }
+
+    async fn set_start_minimized(self, enabled: bool) -> TauResult<()> {
+        let mut config = RencalConfig::load();
+        config.start_minimized = enabled;
+        config.save()
     }
 }

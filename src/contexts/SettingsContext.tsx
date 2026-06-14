@@ -122,6 +122,8 @@ interface SettingsContextType {
   setAutoSyncEnabled: (enabled: boolean) => Promise<void>
   startAtLogin: boolean
   setStartAtLogin: (enabled: boolean) => Promise<void>
+  startMinimized: boolean
+  setStartMinimized: (enabled: boolean) => Promise<void>
   extraTimezones: string[]
   setExtraTimezones: (zones: string[]) => Promise<void>
   timezoneLabels: Record<string, string>
@@ -157,6 +159,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(true)
   const [autoSyncEnabled, setAutoSyncEnabledState] = useState<boolean>(true)
   const [startAtLogin, setStartAtLoginState] = useState<boolean>(false)
+  const [startMinimized, setStartMinimizedState] = useState<boolean>(true)
   const [extraTimezones, setExtraTimezonesState] = useState<string[]>(loadExtraTimezones)
   const [timezoneLabels, setTimezoneLabelsState] =
     useState<Record<string, string>>(loadTimezoneLabels)
@@ -170,7 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const reloadSettings = useCallback(async () => {
     try {
-      const [tf, reminders, cal, dir, notifs, autoSync, startLogin] = await Promise.all([
+      const [tf, reminders, cal, dir, notifs, autoSync, startLogin, startMin] = await Promise.all([
         rpc.caldir.get_time_format(),
         rpc.caldir.get_default_reminders(),
         rpc.caldir.get_default_calendar(),
@@ -178,6 +181,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         rpc.config.get_notifications_enabled(),
         rpc.config.get_auto_sync_enabled(),
         rpc.config.get_start_at_login(),
+        rpc.config.get_start_minimized(),
       ])
       setTimeFormatState(tf)
       setDefaultRemindersState(reminders)
@@ -186,6 +190,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setNotificationsEnabledState(notifs)
       setAutoSyncEnabledState(autoSync)
       setStartAtLoginState(startLogin)
+      setStartMinimizedState(startMin)
       setSettingsLoaded(true)
     } catch (e) {
       console.error(e)
@@ -306,6 +311,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     await emit(START_AT_LOGIN_CHANGED, actual)
   }
 
+  const setStartMinimized = async (enabled: boolean) => {
+    setStartMinimizedState(enabled)
+    await rpc.config.set_start_minimized(enabled)
+  }
+
   const setExtraTimezones = async (zones: string[]) => {
     const next = zones.slice(0, MAX_EXTRA_TIMEZONES)
     setExtraTimezonesState(next)
@@ -380,6 +390,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAutoSyncEnabled,
         startAtLogin,
         setStartAtLogin,
+        startMinimized,
+        setStartMinimized,
         extraTimezones,
         setExtraTimezones,
         timezoneLabels,

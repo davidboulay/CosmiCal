@@ -186,7 +186,9 @@ pub async fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            // Login launches pass --minimized; whether we actually start hidden
+            // is gated by the `start_minimized` setting (see setup below).
+            Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -300,6 +302,13 @@ pub async fn run() {
                 });
             }
 
+            // Start hidden to the tray only when launched at login (--minimized)
+            // and the user left "Start minimized" on. Other launches show the
+            // window. The window is created hidden (visible:false) to avoid a
+            // flash before we decide.
+            let minimized_start = std::env::args().any(|a| a == "--minimized")
+                && rencal_config::RencalConfig::load().start_minimized;
+
             if let Some(window) = app.get_webview_window("main") {
                 if needs_native_decorations() {
                     let _ = window.set_decorations(true);
@@ -310,6 +319,10 @@ pub async fn run() {
                     MIN_WINDOW_WIDTH,
                     MIN_WINDOW_HEIGHT,
                 )));
+                if !minimized_start {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
             }
 
             Ok(())

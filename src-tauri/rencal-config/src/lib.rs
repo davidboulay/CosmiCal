@@ -32,6 +32,10 @@ pub struct RencalConfig {
     pub notifications_enabled: bool,
     #[serde(default = "default_auto_sync_enabled")]
     pub auto_sync_enabled: bool,
+    /// When started at login (launched with `--minimized`), start hidden to the
+    /// tray instead of opening the window. Only affects autostart launches.
+    #[serde(default = "default_true")]
+    pub start_minimized: bool,
     /// Google OAuth client (Desktop) used for creating Google Meet links via the
     /// Calendar REST API. The user supplies their own client; the refresh token
     /// is obtained via a one-time consent. All optional (feature is off until set).
@@ -54,6 +58,7 @@ impl Default for RencalConfig {
             theme: default_theme(),
             notifications_enabled: default_notifications_enabled(),
             auto_sync_enabled: default_auto_sync_enabled(),
+            start_minimized: true,
             google_meet_client_id: None,
             google_meet_client_secret: None,
             google_meet_refresh_token: None,
