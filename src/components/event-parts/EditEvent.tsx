@@ -29,7 +29,7 @@ import {
   toAllDay,
   toTimedAtStartOfDay,
 } from "@/lib/event-time"
-import { getUserResponseStatus, isEventReadonly } from "@/lib/event-utils"
+import { getUserResponseStatus, isCalendarWritable, isEventReadonly } from "@/lib/event-utils"
 import { recurrenceToRRuleSet, rruleToRecurrence } from "@/lib/rrule-utils"
 
 import { MoreHorizIcon } from "@/icons/more-horiz"
@@ -62,7 +62,9 @@ export const EditEvent = ({
   // Delete key shortcut: open delete dialog when no field is focused
   useEffect(() => {
     if (!dirtyEvent) return
-    if (isEventReadonly(dirtyEvent, calendars)) return
+    // Deleting is allowed whenever the calendar is writable (even for invites
+    // you don't organize) — not tied to the content-readonly check.
+    if (!isCalendarWritable(dirtyEvent, calendars)) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return
@@ -160,7 +162,9 @@ export const EditEvent = ({
       <div className="flex justify-end px-1 pb-1">
         {children}
 
-        {!isReadonly && <OverflowMenu onDelete={() => triggerDelete(dirtyEvent)} tabIndex={-1} />}
+        {isCalendarWritable(dirtyEvent, calendars) && (
+          <OverflowMenu onDelete={() => triggerDelete(dirtyEvent)} tabIndex={-1} />
+        )}
       </div>
 
       <EventInfo

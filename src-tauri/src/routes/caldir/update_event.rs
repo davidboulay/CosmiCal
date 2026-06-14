@@ -7,6 +7,23 @@ use crate::routes::TauResult;
 use caldir_core::{Attendee, EventInstanceId, Reminder};
 use chrono::Utc;
 
+/// Loose check that an address is a real email (not a Google obfuscated id like
+/// "/aMjA…"). Good enough to keep providers from rejecting a create.
+fn is_valid_email(email: &str) -> bool {
+    let e = email.trim().strip_prefix("mailto:").unwrap_or(email.trim());
+    match e.split_once('@') {
+        Some((local, domain)) => {
+            !local.is_empty()
+                && !e.contains(char::is_whitespace)
+                && !e.starts_with('/')
+                && domain.contains('.')
+                && !domain.starts_with('.')
+                && !domain.ends_with('.')
+        }
+        None => false,
+    }
+}
+
 pub(super) async fn handler(input: UpdateEventInput) -> TauResult<()> {
     let caldir = load_caldir()?;
 
@@ -82,6 +99,25 @@ pub(super) async fn handler(input: UpdateEventInput) -> TauResult<()> {
         updated_event.last_modified = Some(Utc::now());
         updated_event.sequence += 1;
         set_conference_url(&mut updated_event, input.conference_url.as_deref());
+
+        // Drop attendees whose address isn't a real email — Google events often
+        // carry the self/organizer as an opaque obfuscated id (e.g.
+        // "mailto:/aMjA…") which a provider rejects with "Invalid attendee
+        // email" when the event is pushed (notably on a cross-calendar create).
+        // Likewise clear an invalid organizer so the provider assigns the owner.
+        let before = updated_event.attendees.len();
+        updated_event.attendees.retain(|a| is_valid_email(&a.email));
+        let dropped = before - updated_event.attendees.len();
+        if dropped > 0 {
+            log::info!("update {}: dropped {dropped} attendee(s) with an invalid email", input.id);
+        }
+        if updated_event
+            .organizer
+            .as_ref()
+            .is_some_and(|o| !is_valid_email(&o.email))
+        {
+            updated_event.organizer = None;
+        }
 
         if moving {
             let new_slug = input.new_calendar_slug.as_ref().unwrap();

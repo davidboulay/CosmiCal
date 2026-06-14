@@ -47,6 +47,14 @@ export function isEventReadonly(event: CalendarEvent, calendars: Calendar[]): bo
   return !isUserOrganizer(event, calendars)
 }
 
+/** Whether the event lives on a writable calendar — i.e. it can be deleted or
+ * moved off that calendar, even if its content is otherwise read-only (an
+ * invitation you don't organize). */
+export function isCalendarWritable(event: CalendarEvent, calendars: Calendar[]): boolean {
+  const calendar = calendars.find((c) => c.slug === event.calendar_slug)
+  return !!calendar && !calendar.read_only
+}
+
 export function isPendingEvent(event: CalendarEvent, calendars: Calendar[]): boolean {
   return getUserResponseStatus(event, calendars) === "needs-action"
 }

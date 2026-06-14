@@ -180,49 +180,42 @@ export function CalendarStateProvider({
     }
   }, [setAccountNameOverrides, setColorOverrides])
 
+  // The user's real, persisted visibility choices.
   const [hiddenSlugs, setHiddenSlugs] = useLocalStorage("hiddenCalendars", z.array(z.string()), [])
-  const hiddenCalendarSlugs = useMemo(() => new Set(hiddenSlugs), [hiddenSlugs])
 
-  // Isolate state: when set, `isolatedSlug` is the only visible calendar. We
-  // remember the hidden set from just before isolating so we can restore it
-  // exactly when isolation is turned off.
+  // Isolation ("show only this calendar") is a transient overlay: it's never
+  // persisted, so it resets on quit and the persisted hidden set always holds
+  // the user's real choices. This keeps the left panel and the calendar in
+  // sync on reload.
   const [isolatedSlug, setIsolatedSlug] = useState<string | null>(null)
-  const preIsolateHiddenRef = useRef<string[] | null>(null)
+
+  // Effective visibility: the isolation overlay when active, otherwise the
+  // persisted hidden set. Both the views and the left panel read this, so they
+  // always match.
+  const hiddenCalendarSlugs = useMemo(() => {
+    if (isolatedSlug) {
+      return new Set(calendars.map((c) => c.slug).filter((s) => s !== isolatedSlug))
+    }
+    return new Set(hiddenSlugs)
+  }, [isolatedSlug, hiddenSlugs, calendars])
 
   const toggleCalendarVisibility = useCallback(
     (slug: string) => {
-      // Manually toggling visibility breaks the isolate snapshot, so drop it.
+      // Toggle within whatever is currently visible (materializing the
+      // isolation overlay if active), drop isolation, and persist — so the
+      // checkbox behaves WYSIWYG.
+      const next = new Set(hiddenCalendarSlugs)
+      if (next.has(slug)) next.delete(slug)
+      else next.add(slug)
       setIsolatedSlug(null)
-      preIsolateHiddenRef.current = null
-      setHiddenSlugs(
-        hiddenCalendarSlugs.has(slug)
-          ? hiddenSlugs.filter((s) => s !== slug)
-          : [...hiddenSlugs, slug],
-      )
+      setHiddenSlugs([...next])
     },
-    [hiddenSlugs, hiddenCalendarSlugs, setHiddenSlugs],
+    [hiddenCalendarSlugs, setHiddenSlugs],
   )
 
-  const toggleIsolate = useCallback(
-    (slug: string) => {
-      if (isolatedSlug === slug) {
-        // Turning isolate off: restore the prior hidden set exactly.
-        setHiddenSlugs(preIsolateHiddenRef.current ?? [])
-        preIsolateHiddenRef.current = null
-        setIsolatedSlug(null)
-      } else {
-        // Turning isolate on (or switching the isolated calendar): remember the
-        // hidden set only the first time we enter isolation so we can revert to
-        // the user's real choices, not a previously-isolated state.
-        if (isolatedSlug === null) {
-          preIsolateHiddenRef.current = hiddenSlugs
-        }
-        setHiddenSlugs(calendars.map((c) => c.slug).filter((s) => s !== slug))
-        setIsolatedSlug(slug)
-      }
-    },
-    [isolatedSlug, hiddenSlugs, calendars, setHiddenSlugs],
-  )
+  const toggleIsolate = useCallback((slug: string) => {
+    setIsolatedSlug((prev) => (prev === slug ? null : slug))
+  }, [])
 
   const scrollToDateRef = useRef<((date: Date, behavior?: ScrollBehavior) => void) | null>(null)
   const scrollToNowRef = useRef<(() => void) | null>(null)
