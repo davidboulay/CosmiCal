@@ -138,7 +138,29 @@ new_calendar_slug: string | null; summary: string; description: string | null; l
  */
 conference_url?: string | null }
 
-const ARGS_MAP = { 'caldir':'{"check_provider_connection":["provider_name","account"],"connect_provider":["provider_name"],"connect_provider_with_credentials":["provider_name","credentials"],"create_event":["input"],"create_event_with_meet":["input"],"create_local_calendar":["name","color"],"delete_event":["calendar_slug","event_id"],"delete_recurring_series":["calendar_slug","uid"],"discard":[],"get_calendar_dir":[],"get_default_calendar":[],"get_default_reminders":[],"get_event":["calendar_slug","event_id"],"get_provider_connect_info":["provider_name"],"get_time_format":[],"google_meet_connect":[],"google_meet_disconnect":[],"google_meet_status":[],"list_calendars":[],"list_events":["calendar_slugs","start","end"],"list_invites":["calendar_slugs"],"list_providers":[],"remove_account":["account"],"rsvp":["calendar_slug","event_id","response"],"search_events":["calendar_slugs","query"],"search_google_contacts":["query"],"search_places":["query"],"set_calendar_dir":["path"],"set_default_calendar":["slug"],"set_default_reminders":["minutes"],"set_google_features":["meet_enabled","contacts_enabled"],"set_google_meet_credentials":["client_id","client_secret"],"set_time_format":["time_format"],"split_recurring_series_at":["input"],"sync":["allow_mass_delete"],"sync_preview":[],"update_event":["input"]}', 'config':'{"get_auto_sync_enabled":[],"get_notifications_enabled":[],"get_start_at_login":[],"get_start_minimized":[],"get_theme":[],"set_auto_sync_enabled":["enabled"],"set_notifications_enabled":["enabled"],"set_start_at_login":["enabled"],"set_start_minimized":["enabled"],"set_theme":["theme"]}', 'omarchy':'{"get_colors":[]}', 'platform':'{"needs_native_decorations":[],"set_tray_pending":["pending"]}' }
+export type UpdateInfo = { 
+/**
+ * The running version, e.g. "0.2.10".
+ */
+current: string; 
+/**
+ * Latest release version (no leading 'v'); None if the check failed.
+ */
+latest: string | null; update_available: boolean; 
+/**
+ * Release page to open in a browser.
+ */
+url: string; 
+/**
+ * Direct `.deb` download URL, if the latest release ships one.
+ */
+deb_url: string | null; 
+/**
+ * Human-readable reason the check failed, if any.
+ */
+error: string | null }
+
+const ARGS_MAP = { 'caldir':'{"check_provider_connection":["provider_name","account"],"connect_provider":["provider_name"],"connect_provider_with_credentials":["provider_name","credentials"],"create_event":["input"],"create_event_with_meet":["input"],"create_local_calendar":["name","color"],"delete_event":["calendar_slug","event_id"],"delete_recurring_series":["calendar_slug","uid"],"discard":[],"get_calendar_dir":[],"get_default_calendar":[],"get_default_reminders":[],"get_event":["calendar_slug","event_id"],"get_provider_connect_info":["provider_name"],"get_time_format":[],"google_meet_connect":[],"google_meet_disconnect":[],"google_meet_status":[],"list_calendars":[],"list_events":["calendar_slugs","start","end"],"list_invites":["calendar_slugs"],"list_providers":[],"remove_account":["account"],"rsvp":["calendar_slug","event_id","response"],"search_events":["calendar_slugs","query"],"search_google_contacts":["query"],"search_places":["query"],"set_calendar_dir":["path"],"set_default_calendar":["slug"],"set_default_reminders":["minutes"],"set_google_features":["meet_enabled","contacts_enabled"],"set_google_meet_credentials":["client_id","client_secret"],"set_time_format":["time_format"],"split_recurring_series_at":["input"],"sync":["allow_mass_delete"],"sync_preview":[],"update_event":["input"]}', 'config':'{"get_auto_sync_enabled":[],"get_notifications_enabled":[],"get_start_at_login":[],"get_start_minimized":[],"get_theme":[],"set_auto_sync_enabled":["enabled"],"set_notifications_enabled":["enabled"],"set_start_at_login":["enabled"],"set_start_minimized":["enabled"],"set_theme":["theme"]}', 'omarchy':'{"get_colors":[]}', 'platform':'{"check_for_update":[],"install_update":["deb_url"],"needs_native_decorations":[],"set_tray_pending":["pending"]}' }
 export type Router = { "caldir": {check_provider_connection: (providerName: string, account: string) => Promise<null>, 
 connect_provider: (providerName: string) => Promise<Calendar[]>, 
 connect_provider_with_credentials: (providerName: string, credentials: CredentialFieldInput[]) => Promise<Calendar[]>, 
@@ -187,7 +209,9 @@ set_start_at_login: (enabled: boolean) => Promise<null>,
 set_start_minimized: (enabled: boolean) => Promise<null>, 
 set_theme: (theme: string) => Promise<null>},
 "omarchy": {get_colors: () => Promise<OmarchyColors | null>},
-"platform": {needs_native_decorations: () => Promise<boolean>, 
+"platform": {check_for_update: () => Promise<UpdateInfo>, 
+install_update: (debUrl: string) => Promise<null>, 
+needs_native_decorations: () => Promise<boolean>, 
 set_tray_pending: (pending: boolean) => Promise<void>} };
 
 

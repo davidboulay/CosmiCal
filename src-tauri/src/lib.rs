@@ -10,6 +10,7 @@ mod routes;
 #[cfg(target_os = "linux")]
 mod single_instance;
 mod tray;
+mod updater;
 
 use routes::caldir::{CaldirApi, CaldirApiImpl};
 use routes::config::{ConfigApi, ConfigApiImpl};

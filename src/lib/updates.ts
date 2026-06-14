@@ -1,8 +1,9 @@
 // Update checking against the public GitHub releases API. CosmiCal is
-// distributed as a .deb; installing a .deb silently requires sudo, which the
-// app can't obtain — so the most we can do is detect a newer release and let
-// the user download the asset / open the release page to install it manually.
+// distributed as a .deb; the backend installs a newer release via PolicyKit
+// (`pkexec apt-get install`), so we can both detect and apply updates.
 import { getVersion } from "@tauri-apps/api/app"
+
+import { rpc } from "@/rpc"
 
 const RELEASES_API = "https://api.github.com/repos/davidboulay/CosmiCal/releases/latest"
 const RELEASES_PAGE = "https://github.com/davidboulay/CosmiCal/releases/latest"
@@ -73,4 +74,10 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     debUrl,
     releaseUrl,
   }
+}
+
+/** Download the release .deb and install it via PolicyKit (a password dialog
+ * appears). Resolves once installed; rejects with a human-readable message. */
+export async function installUpdate(debUrl: string): Promise<void> {
+  await rpc.platform.install_update(debUrl)
 }

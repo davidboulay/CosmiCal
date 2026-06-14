@@ -43,6 +43,8 @@ pub fn needs_native_decorations() -> bool {
 pub trait PlatformApi {
     async fn needs_native_decorations() -> bool;
     async fn set_tray_pending(pending: bool);
+    async fn check_for_update() -> crate::updater::UpdateInfo;
+    async fn install_update(deb_url: String) -> Result<(), String>;
 }
 
 #[derive(Clone)]
@@ -55,5 +57,11 @@ impl PlatformApi for PlatformApiImpl {
     }
     async fn set_tray_pending(self, pending: bool) {
         crate::tray::set_pending(pending);
+    }
+    async fn check_for_update(self) -> crate::updater::UpdateInfo {
+        crate::updater::check().await
+    }
+    async fn install_update(self, deb_url: String) -> Result<(), String> {
+        crate::updater::download_and_install(deb_url).await
     }
 }

@@ -2,6 +2,7 @@ import { Toaster } from "sonner"
 
 import "@/global.css"
 
+import { UpdateNotifier } from "@/components/UpdateNotifier"
 import { PopoverEditEvent } from "@/components/event-parts/PopoverEditEvent"
 import { PopoverNewEvent } from "@/components/event-parts/PopoverNewEvent"
 import { SheetEvent } from "@/components/event-parts/SheetInfo"
@@ -50,6 +51,7 @@ function App() {
   return (
     <main className="flex h-screen overflow-hidden">
       <GlobalShortcuts onChangeCalendarView={setCalendarView} />
+      <UpdateNotifier />
       <DragRegion className="absolute h-4! w-full" />
 
       <Sidebar />

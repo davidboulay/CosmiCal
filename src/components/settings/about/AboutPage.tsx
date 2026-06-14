@@ -1,5 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
-import { useId } from "react"
+import { useId, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { useSettings } from "@/contexts/SettingsContext"
 
 import { useUpdateCheck, type UpdateCheckStatus } from "@/hooks/useUpdateCheck"
+import { installUpdate, type UpdateInfo } from "@/lib/updates"
 
 import { BugIcon } from "@/icons/bug"
 
@@ -74,13 +76,39 @@ const UpdateStatusLine = ({ status }: { status: UpdateCheckStatus }) => {
     )
   }
 
-  const { info } = status
+  return <UpdateAvailable info={status.info} />
+}
+
+const UpdateAvailable = ({ info }: { info: UpdateInfo }) => {
+  const [installing, setInstalling] = useState(false)
+
   if (!info.hasUpdate) {
     return (
       <span className="text-xs text-muted-foreground">
         You're up to date (version {info.currentVersion}).
       </span>
     )
+  }
+
+  const install = async () => {
+    if (!info.debUrl) return
+    setInstalling(true)
+    const id = toast.loading(`Downloading and installing ${info.latestVersion}…`)
+    try {
+      await installUpdate(info.debUrl)
+      toast.success("Update installed", {
+        id,
+        description: "Restart CosmiCal to finish updating.",
+        duration: 10000,
+      })
+    } catch (e) {
+      toast.error("Update failed", {
+        id,
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setInstalling(false)
+    }
   }
 
   return (
@@ -90,8 +118,8 @@ const UpdateStatusLine = ({ status }: { status: UpdateCheckStatus }) => {
       </span>
       <div className="flex items-center gap-2">
         {info.debUrl && (
-          <Button variant="secondary" onClick={() => void openUrl(info.debUrl!)}>
-            Download .deb
+          <Button disabled={installing} onClick={() => void install()}>
+            {installing ? "Installing…" : "Install update"}
           </Button>
         )}
         <Button variant="ghost" onClick={() => void openUrl(info.releaseUrl)}>
@@ -99,9 +127,8 @@ const UpdateStatusLine = ({ status }: { status: UpdateCheckStatus }) => {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Installing a .deb needs administrator rights, so CosmiCal can't update itself automatically
-        — download the package above and install it (e.g. with your software center or{" "}
-        <code>sudo apt install ./CosmiCal.deb</code>).
+        Installing needs administrator rights — a password prompt will appear. After it finishes,
+        restart CosmiCal to run the new version.
       </p>
     </div>
   )
