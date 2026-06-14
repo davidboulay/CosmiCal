@@ -35,7 +35,16 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
   const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null)
 
   const requestSave = (current: CalendarEvent, original: CalendarEvent) => {
+    const calendarMoved = current.calendar_slug !== original.calendar_slug
+
     if (current.recurring_event_id !== null) {
+      // A repeating event can't keep a single occurrence in a different
+      // calendar, so changing the calendar moves the whole series — there's no
+      // per-instance choice to offer.
+      if (calendarMoved) {
+        void moveSeriesToCalendar(current, original)
+        return
+      }
       setPendingEdit({ current, original })
       return
     }
@@ -45,10 +54,38 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
       // source; the optimistic update + watcher can race those writes, so force
       // a clean reload to land the event in its new calendar (mirrors the
       // recurring "all events" path below).
-      if (current.calendar_slug !== original.calendar_slug) {
+      if (calendarMoved) {
         await reloadEvents()
       }
     })()
+  }
+
+  // Move an entire recurring series to another calendar by relocating its
+  // master (carrying over any content edits, but keeping the series' schedule).
+  // `current` already carries the new calendar_slug; the master is fetched from
+  // the original calendar where the series still lives.
+  const moveSeriesToCalendar = async (current: CalendarEvent, original: CalendarEvent) => {
+    if (!current.recurring_event_id) return
+    try {
+      const masterRpc = await rpc.caldir.get_event(
+        original.calendar_slug,
+        current.recurring_event_id,
+      )
+      if (!masterRpc) return
+      const master = rpcToCalendarEvent(masterRpc)
+      const updatedMaster: CalendarEvent = {
+        ...master,
+        calendar_slug: current.calendar_slug,
+        summary: current.summary,
+        description: current.description,
+        location: current.location,
+        reminders: current.reminders,
+      }
+      await updateAndSyncEvent(updatedMaster, master, setCalendarEvents, requestSync)
+      await reloadEvents()
+    } catch (err) {
+      reportError(err)
+    }
   }
 
   const closeDialog = () => setPendingEdit(null)
