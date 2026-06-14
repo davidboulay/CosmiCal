@@ -50,9 +50,17 @@ export function PopoverEditEvent() {
         collisionPadding={16}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement
+          // Clicks inside a portaled popper (the calendar/repeat/reminder
+          // Select dropdowns render outside the popover DOM) must NOT dismiss
+          // the editor — otherwise choosing an option closes it before the
+          // change is applied (e.g. moving an event to another calendar).
+          if (target.closest("[data-radix-popper-content-wrapper],[role='listbox']")) {
+            e.preventDefault()
+            return
+          }
           // If the click landed on an event element, let that element's
           // toggle handler manage the popover instead of auto-dismissing.
-          const target = e.target as HTMLElement
           if (target.closest("[data-event-clickable]")) {
             e.preventDefault()
           } else {

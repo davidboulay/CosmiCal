@@ -80,7 +80,13 @@ export function EventPopover({
         collisionPadding={16}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => {
-          if (resultsRef.current?.contains(e.target as Node)) {
+          const target = e.target as HTMLElement
+          // Don't dismiss when interacting with a portaled Select dropdown
+          // (e.g. picking another calendar) or the search results list.
+          if (
+            target.closest?.("[data-radix-popper-content-wrapper],[role='listbox']") ||
+            resultsRef.current?.contains(target)
+          ) {
             e.preventDefault()
           }
         }}
