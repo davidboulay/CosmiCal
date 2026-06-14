@@ -50,6 +50,7 @@ function ExtraTimezoneTimes({ start, end }: { start: EventTime; end: EventTime }
 
 export function EventInfo({
   readonly,
+  calendarReadonly,
   summaryRef,
   summary,
   onChangeSummary,
@@ -84,6 +85,10 @@ export function EventInfo({
   onClose,
 }: {
   readonly?: boolean
+  /** Whether the calendar selector is locked. Defaults to `readonly`, but the
+   * editor enables it even for read-only (invite) events when the source
+   * calendar is writable, so the event can still be moved to another calendar. */
+  calendarReadonly?: boolean
   summaryRef?: React.Ref<HTMLTextAreaElement>
   summary?: string | null
   onChangeSummary: (summary: string) => void
@@ -198,7 +203,11 @@ export function EventInfo({
           />
         )}
 
-        <CalendarSelect calendar={calendar} onChange={onCalendarChange} readOnly={readonly} />
+        <CalendarSelect
+          calendar={calendar}
+          onChange={onCalendarChange}
+          readOnly={calendarReadonly ?? readonly}
+        />
 
         <NotesInput value={description} onChange={onDescriptionChange} readOnly={readonly} />
 

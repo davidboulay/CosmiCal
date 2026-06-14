@@ -165,6 +165,10 @@ export const EditEvent = ({
 
       <EventInfo
         readonly={isReadonly}
+        // Allow moving the event to another calendar even when its content is
+        // read-only (e.g. an invitation), as long as the source calendar is
+        // writable so the event can actually be removed from it.
+        calendarReadonly={!!calendar?.read_only}
         summary={summary}
         onChangeSummary={(newSummary) => {
           setDirtyEvent({ ...dirtyEvent, summary: newSummary })
