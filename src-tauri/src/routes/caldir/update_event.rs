@@ -85,21 +85,33 @@ pub(super) async fn handler(input: UpdateEventInput) -> TauResult<()> {
 
         if moving {
             let new_slug = input.new_calendar_slug.as_ref().unwrap();
-            let target_calendar = caldir.calendar(new_slug).map_err(|e| e.to_string())?;
+            log::info!(
+                "move event {} from [{}] to [{}]",
+                input.id,
+                input.calendar_slug,
+                new_slug
+            );
+            let target_calendar = caldir.calendar(new_slug).map_err(|e| {
+                log::warn!("move: target calendar [{new_slug}] not found: {e}");
+                e.to_string()
+            })?;
 
             // New UID so remote providers treat it as a fresh event
             let moved_event = updated_event.with_new_uid();
 
             // Create in target calendar first (safe: if this fails, original is untouched)
-            target_calendar
-                .create_event(moved_event)
-                .map_err(|e| e.to_string())?;
+            target_calendar.create_event(moved_event).map_err(|e| {
+                log::warn!("move: create in [{new_slug}] failed: {e}");
+                e.to_string()
+            })?;
 
             // Only delete from source after successful creation
-            existing_calendar_event
-                .delete()
-                .map_err(|e| e.to_string())?;
+            existing_calendar_event.delete().map_err(|e| {
+                log::warn!("move: delete from [{}] failed: {e}", input.calendar_slug);
+                e.to_string()
+            })?;
 
+            log::info!("move event {} succeeded", input.id);
             EVENT_CACHE.invalidate(&input.calendar_slug);
             EVENT_CACHE.invalidate(new_slug);
         } else {

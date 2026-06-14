@@ -39,7 +39,16 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
       setPendingEdit({ current, original })
       return
     }
-    void updateAndSyncEvent(current, original, setCalendarEvents, requestSync)
+    void (async () => {
+      await updateAndSyncEvent(current, original, setCalendarEvents, requestSync)
+      // A move creates a new event in the target and deletes it from the
+      // source; the optimistic update + watcher can race those writes, so force
+      // a clean reload to land the event in its new calendar (mirrors the
+      // recurring "all events" path below).
+      if (current.calendar_slug !== original.calendar_slug) {
+        await reloadEvents()
+      }
+    })()
   }
 
   const closeDialog = () => setPendingEdit(null)
