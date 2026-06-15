@@ -1,116 +1,79 @@
-//! Linux single-instance via Unix domain socket.
+//! Linux single-instance via an **abstract-namespace** Unix socket.
 //!
-//! `tauri-plugin-single-instance` uses `zbus::blocking` on Linux, which —
-//! combined with the `zbus/tokio` feature pulled in transitively by
-//! `tauri-plugin-dialog`'s `xdg-portal` feature — panics from a tokio context
-//! ("Cannot start a runtime from within a runtime"). The plugin works fine on
-//! macOS/Windows (no zbus there); we use this socket-based stand-in only on
-//! Linux.
+//! Earlier this used a filesystem socket, which has two race hazards: a stale
+//! file left by a crash, and—worse—two simultaneous launches both missing the
+//! socket and self-promoting (or a launch unlinking a live socket while trying
+//! to clear a "stale" one), yielding two windows.
 //!
-//! Protocol: a single socket at `$XDG_RUNTIME_DIR/rencal.sock` (or, when
-//! `XDG_RUNTIME_DIR` is unset, `/tmp/rencal-<uid>.sock` — UID-namespaced so
-//! a second user on a multi-user host doesn't collide with the first).
-//! On startup, we try to connect:
-//! - `Ok` → another instance is alive; we send `focus\n` and exit.
-//! - `Err` → either no instance, or a stale socket file from a prior crash.
-//!   Remove the file and bind. The bound listener is held for the process
-//!   lifetime; a background thread accepts connections and forwards focus
-//!   requests via the supplied callback.
+//! The Linux abstract namespace (a socket name with no filesystem path) removes
+//! both: there is no file to go stale or be unlinked, `bind` is atomic (exactly
+//! one instance wins with `AddrInUse` for the rest), and the kernel releases the
+//! name automatically when the owning process exits — even on a crash. Everyone
+//! who loses the bind simply connects to the winner and signals it.
+//!
+//! Protocol: the winner listens; secondary launches send `focus\n` (plain
+//! re-launch / dock click) or `open\t<token>\n` (launched with `--open-event=`).
 
 use std::io::{Read, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::PathBuf;
+use std::os::linux::net::SocketAddrExt;
+use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
 
-/// Hold for the process lifetime; the kernel removes the socket file when the
-/// listener is dropped (we also unbind explicitly on Drop for cleanliness).
+/// Held for the process lifetime. Dropping it (on exit) closes the listener,
+/// which releases the abstract name — no file cleanup needed.
 pub struct InstanceGuard {
     listener: Option<UnixListener>,
-    path: PathBuf,
 }
 
-impl Drop for InstanceGuard {
-    fn drop(&mut self) {
-        drop(self.listener.take());
-        let _ = std::fs::remove_file(&self.path);
-    }
-}
-
-fn socket_path() -> PathBuf {
-    if let Some(runtime) = dirs::runtime_dir() {
-        // XDG_RUNTIME_DIR is already per-user (mode 0700, owned by the user),
-        // so a bare filename is safe.
-        return runtime.join("rencal.sock");
-    }
-    // Fallback: /tmp is shared across users. Namespace by euid so each user
-    // gets their own socket instead of fighting over a single global one.
+/// The abstract socket address, namespaced by euid so two users on one host
+/// don't collide. Abstract names have no leading slash and live in their own
+/// namespace, distinct from any filesystem path.
+fn instance_addr() -> std::io::Result<SocketAddr> {
     let uid = unsafe { libc::geteuid() };
-    std::env::temp_dir().join(format!("rencal-{uid}.sock"))
+    SocketAddr::from_abstract_name(format!("rencal-{uid}").as_bytes())
 }
 
-/// Either acquire the single-instance role (returning a guard + listener),
-/// or signal the existing instance and return `None` so the caller can exit.
+/// Either acquire the single-instance role (returning a guard holding the
+/// listener), or signal the existing instance and return `None` so the caller
+/// exits.
 ///
-/// `message` is what we send to an already-running instance: `"focus"` for a
-/// plain re-launch, or `"open\t<token>"` when launched with `--open-event=` so
-/// the running app jumps to that event.
+/// `message` is `"focus"` for a plain re-launch, or `"open\t<token>"` when
+/// launched with `--open-event=` so the running app jumps to that event.
 pub fn try_acquire_or_signal(message: &str) -> Option<InstanceGuard> {
-    let path = socket_path();
+    let addr = match instance_addr() {
+        Ok(a) => a,
+        Err(e) => {
+            log::warn!("single-instance: cannot build address: {e}");
+            return Some(InstanceGuard { listener: None });
+        }
+    };
 
-    // Bind-first so acquisition is atomic. This avoids the classic race where
-    // two launches both see "no socket" via connect(), then both bind/self-
-    // promote and you end up with two windows (e.g. session-restore + autostart
-    // firing together on login).
-    for _ in 0..5 {
-        match UnixListener::bind(&path) {
-            Ok(listener) => {
-                return Some(InstanceGuard {
-                    listener: Some(listener),
-                    path,
-                });
+    match UnixListener::bind_addr(&addr) {
+        // We won — we're the primary instance.
+        Ok(listener) => Some(InstanceGuard {
+            listener: Some(listener),
+        }),
+        // Someone already owns the name: connect and signal them, then exit.
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            if let Ok(mut stream) = UnixStream::connect_addr(&addr) {
+                let _ = stream.write_all(message.as_bytes());
+                let _ = stream.write_all(b"\n");
+                return None;
             }
-            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
-                // Something already holds the path. If it's a live instance,
-                // signal it and exit; if it's a stale socket from a crash,
-                // remove it and retry the bind.
-                if let Ok(mut stream) = UnixStream::connect(&path) {
-                    let _ = stream.write_all(message.as_bytes());
-                    let _ = stream.write_all(b"\n");
-                    return None;
-                }
-                let _ = std::fs::remove_file(&path);
-                continue;
-            }
-            Err(e) => {
-                // No permission / unexpected error: we can't own the role, but
-                // a window is better than nothing — duplicates are recoverable.
-                log::warn!("could not bind single-instance socket: {e}");
-                return Some(InstanceGuard {
-                    listener: None,
-                    path,
-                });
-            }
+            // In use but unreachable — shouldn't happen with abstract sockets
+            // (the owner died → name is freed). Run as a lone window rather
+            // than refuse to start; a duplicate is recoverable, no-app isn't.
+            log::warn!("single-instance: address in use but not reachable; starting anyway");
+            Some(InstanceGuard { listener: None })
+        }
+        Err(e) => {
+            log::warn!("single-instance: could not bind: {e}");
+            Some(InstanceGuard { listener: None })
         }
     }
-
-    // Exhausted retries (a live peer kept winning the bind, or a stale file we
-    // couldn't clear): try one last signal, else run as a lone window.
-    if let Ok(mut stream) = UnixStream::connect(&path) {
-        let _ = stream.write_all(message.as_bytes());
-        let _ = stream.write_all(b"\n");
-        return None;
-    }
-    log::warn!("single-instance: gave up acquiring socket after retries");
-    Some(InstanceGuard {
-        listener: None,
-        path,
-    })
 }
 
-/// Spawn a thread that listens for messages from secondary launches and
-/// dispatches them. `"focus"` invokes `on_focus`; `"open\t<token>"` invokes
-/// `on_open(token)` (the app should focus and jump to that event).
-/// Consumes the listener out of the guard; the guard still holds the path so
-/// cleanup on Drop still works.
+/// Spawn a thread that dispatches messages from secondary launches: `"focus"`
+/// invokes `on_focus`; `"open\t<token>"` invokes `on_open(token)`.
 pub fn spawn_listener<F, G>(guard: &mut InstanceGuard, on_focus: F, on_open: G)
 where
     F: Fn() + Send + 'static,
