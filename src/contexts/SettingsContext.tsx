@@ -107,6 +107,25 @@ function loadAllDayVisibleCount(): number {
   return raw === null ? ALL_DAY_VISIBLE_DEFAULT : clampAllDayVisible(Number(raw))
 }
 
+// How often (minutes) the app polls each connected calendar for incoming
+// changes. There's no server→app push, so freshness is bounded by this; lower =
+// fresher but more network/battery (each check re-lists the full sync window).
+// 1–60 min, default 15. Persisted in localStorage, synced across windows.
+const SYNC_INTERVAL_KEY = "syncIntervalMinutes"
+const SYNC_INTERVAL_CHANGED = "sync-interval-minutes-changed"
+export const SYNC_INTERVAL_MIN = 1
+export const SYNC_INTERVAL_MAX = 60
+export const SYNC_INTERVAL_DEFAULT = 15
+
+function clampSyncInterval(n: number): number {
+  if (!Number.isFinite(n)) return SYNC_INTERVAL_DEFAULT
+  return Math.max(SYNC_INTERVAL_MIN, Math.min(SYNC_INTERVAL_MAX, Math.round(n)))
+}
+function loadSyncIntervalMinutes(): number {
+  const raw = localStorage.getItem(SYNC_INTERVAL_KEY)
+  return raw === null ? SYNC_INTERVAL_DEFAULT : clampSyncInterval(Number(raw))
+}
+
 interface SettingsContextType {
   timeFormat: TimeFormat
   setTimeFormat: (tf: TimeFormat) => Promise<void>
@@ -140,6 +159,9 @@ interface SettingsContextType {
   setAutoUpdate: (enabled: boolean) => Promise<void>
   allDayVisibleCount: number
   setAllDayVisibleCount: (count: number) => Promise<void>
+  /** Minutes between automatic background polls for incoming changes. */
+  syncIntervalMinutes: number
+  setSyncIntervalMinutes: (minutes: number) => Promise<void>
   reloadSettings: () => Promise<void>
   // False until persisted settings load, so startup consumers don't act on defaults.
   settingsLoaded: boolean
@@ -169,6 +191,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [weatherUnit, setWeatherUnitState] = useState<WeatherUnit>(loadWeatherUnit)
   const [autoUpdate, setAutoUpdateState] = useState<boolean>(loadAutoUpdate)
   const [allDayVisibleCount, setAllDayVisibleCountState] = useState<number>(loadAllDayVisibleCount)
+  const [syncIntervalMinutes, setSyncIntervalMinutesState] =
+    useState<number>(loadSyncIntervalMinutes)
   const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false)
 
   const reloadSettings = useCallback(async () => {
@@ -244,6 +268,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const unlistenAllDayVisible = listen<number>(ALL_DAY_VISIBLE_CHANGED, (event) => {
       setAllDayVisibleCountState(clampAllDayVisible(event.payload))
     })
+    const unlistenSyncInterval = listen<number>(SYNC_INTERVAL_CHANGED, (event) => {
+      setSyncIntervalMinutesState(clampSyncInterval(event.payload))
+    })
 
     return () => {
       unlistenTimeFormat.then((fn) => fn())
@@ -258,6 +285,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       unlistenWeather.then((fn) => fn())
       unlistenAutoUpdate.then((fn) => fn())
       unlistenAllDayVisible.then((fn) => fn())
+      unlistenSyncInterval.then((fn) => fn())
     }
   }, [reloadSettings])
 
@@ -373,6 +401,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     await emit(ALL_DAY_VISIBLE_CHANGED, next)
   }
 
+  const setSyncIntervalMinutes = async (minutes: number) => {
+    const next = clampSyncInterval(minutes)
+    setSyncIntervalMinutesState(next)
+    localStorage.setItem(SYNC_INTERVAL_KEY, String(next))
+    await emit(SYNC_INTERVAL_CHANGED, next)
+  }
+
   return (
     <SettingsContext.Provider
       value={{
@@ -408,6 +443,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAutoUpdate,
         allDayVisibleCount,
         setAllDayVisibleCount,
+        syncIntervalMinutes,
+        setSyncIntervalMinutes,
         reloadSettings,
         settingsLoaded,
       }}

@@ -116,8 +116,14 @@ const TimeFormatSection = () => {
   )
 }
 
+// Offered cadences (minutes). Lower = fresher incoming changes, more
+// network/battery — each check re-lists the full sync window since there's no
+// server push. Kept within SettingsContext's 1–60 clamp.
+const SYNC_INTERVAL_OPTIONS = [1, 2, 5, 10, 15, 30, 60]
+
 const AutoSyncSection = () => {
-  const { autoSyncEnabled, setAutoSyncEnabled } = useSettings()
+  const { autoSyncEnabled, setAutoSyncEnabled, syncIntervalMinutes, setSyncIntervalMinutes } =
+    useSettings()
   const id = useId()
 
   return (
@@ -137,6 +143,30 @@ const AutoSyncSection = () => {
         When off, renCal only checks for changes and shows a counter — click the sync icon to apply
         them.
       </p>
+
+      <div className="flex flex-col gap-2 pl-7 mt-2">
+        <label className="text-sm">Check for changes every</label>
+        <Select
+          value={String(syncIntervalMinutes)}
+          onValueChange={(v) => void setSyncIntervalMinutes(Number(v))}
+        >
+          <SelectTrigger className="w-[200px]" ghost={false}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SYNC_INTERVAL_OPTIONS.map((m) => (
+              <SelectItem key={m} value={String(m)}>
+                {m === 60 ? "1 hour" : `${m} ${m === 1 ? "minute" : "minutes"}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          How often CosmiCal polls your accounts for changes made elsewhere. There's no instant push
+          from the server, so this sets how fresh your calendars stay. Your own edits sync
+          immediately regardless.
+        </p>
+      </div>
     </div>
   )
 }

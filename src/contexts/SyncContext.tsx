@@ -72,7 +72,7 @@ export function useSync() {
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { calendars } = useCalendars()
-  const { autoSyncEnabled, settingsLoaded } = useSettings()
+  const { autoSyncEnabled, settingsLoaded, syncIntervalMinutes } = useSettings()
 
   const [isChecking, setIsChecking] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -267,31 +267,31 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // Refresh when the window regains focus, but throttled — otherwise routine
   // focus changes (closing a dialog, alt-tabbing) would re-run the whole sweep
-  // every time. Only sync if it's been a while since the last full sync.
-  const FOCUS_SYNC_THROTTLE_MS = 5 * 60_000
+  // every time. The throttle tracks the configured interval but never waits
+  // longer than 5 min, so returning to the window still feels fresh even when
+  // the periodic interval is long.
+  const focusThrottleMs = Math.min(syncIntervalMinutes * 60_000, 5 * 60_000)
   useEffect(() => {
     const unlisten = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (
-        focused &&
-        settingsLoaded &&
-        Date.now() - lastFullSyncRef.current > FOCUS_SYNC_THROTTLE_MS
-      ) {
+      if (focused && settingsLoaded && Date.now() - lastFullSyncRef.current > focusThrottleMs) {
         void runSync(autoSyncEnabled)
       }
     })
     return () => {
       unlisten.then((fn) => fn())
     }
-  }, [runSync, autoSyncEnabled, settingsLoaded])
+  }, [runSync, autoSyncEnabled, settingsLoaded, focusThrottleMs])
 
   // Gentle periodic refresh so calendars stay current even if the window is
-  // never refocused and nothing is edited.
-  const PERIODIC_SYNC_MS = 15 * 60_000
+  // never refocused and nothing is edited. Cadence is user-configurable
+  // (Settings → sync interval); there's no server push, so this bounds how
+  // stale incoming changes can get.
   useEffect(() => {
     if (!settingsLoaded) return
-    const id = setInterval(() => void runSync(autoSyncEnabledRef.current), PERIODIC_SYNC_MS)
+    const periodMs = syncIntervalMinutes * 60_000
+    const id = setInterval(() => void runSync(autoSyncEnabledRef.current), periodMs)
     return () => clearInterval(id)
-  }, [runSync, settingsLoaded])
+  }, [runSync, settingsLoaded, syncIntervalMinutes])
 
   const value = useMemo<SyncContextType>(
     () => ({
