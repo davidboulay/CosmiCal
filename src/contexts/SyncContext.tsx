@@ -49,6 +49,9 @@ interface SyncProgressEvent {
 interface SyncContextType {
   requestSync: () => Promise<void>
   syncNow: () => Promise<void>
+  /** Push/pull only the given calendars — used after a local mutation so we
+   * don't loop every account. Falls back to a full check when auto-sync is off. */
+  syncCalendars: (slugs: string[]) => Promise<void>
   isChecking: boolean
   isSyncing: boolean
   syncError: string | null
@@ -158,6 +161,38 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const requestSync = useCallback(() => runSync(autoSyncEnabledRef.current), [runSync])
   const syncNow = useCallback(() => runSync(true), [runSync])
 
+  // Targeted sync after a mutation: push/pull just the affected calendar(s).
+  // When auto-sync is off we instead run a full check so the pending-change
+  // counter still updates (the user applies changes manually).
+  const syncCalendars = useCallback(
+    async (slugs: string[]) => {
+      const unique = [...new Set(slugs.filter(Boolean))]
+      if (unique.length === 0) return
+      if (!autoSyncEnabledRef.current) {
+        void runSync(false)
+        return
+      }
+      if (isSyncingRef.current) return
+      isSyncingRef.current = true
+      setIsSyncing(true)
+      setSyncError(null)
+      setCalendarStatuses(
+        Object.fromEntries(unique.map((slug) => [slug, { phase: "pending" as const }])),
+      )
+      try {
+        for (const slug of unique) {
+          await rpc.caldir.sync_calendar(slug)
+        }
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : String(e))
+      } finally {
+        isSyncingRef.current = false
+        setIsSyncing(false)
+      }
+    },
+    [runSync],
+  )
+
   const confirmMassDelete = useCallback(async () => {
     const tripped = pendingMassDelete
     if (tripped === null) return
@@ -242,6 +277,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     () => ({
       requestSync,
       syncNow,
+      syncCalendars,
       isChecking,
       isSyncing,
       syncError,
@@ -255,6 +291,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     [
       requestSync,
       syncNow,
+      syncCalendars,
       isChecking,
       isSyncing,
       syncError,

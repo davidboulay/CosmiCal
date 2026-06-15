@@ -31,7 +31,7 @@ export function useRecurrenceEdit(): RecurrenceEditContextValue {
 
 export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
   const { setCalendarEvents, reloadEvents } = useCalEvents()
-  const { requestSync } = useSync()
+  const { syncCalendars } = useSync()
   const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null)
 
   const requestSave = (current: CalendarEvent, original: CalendarEvent) => {
@@ -49,7 +49,7 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
       return
     }
     void (async () => {
-      await updateAndSyncEvent(current, original, setCalendarEvents, requestSync)
+      await updateAndSyncEvent(current, original, setCalendarEvents, syncCalendars)
       // A move creates a new event in the target and deletes it from the
       // source; the optimistic update + watcher can race those writes, so force
       // a clean reload to land the event in its new calendar (mirrors the
@@ -81,7 +81,7 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
         location: current.location,
         reminders: current.reminders,
       }
-      await updateAndSyncEvent(updatedMaster, master, setCalendarEvents, requestSync)
+      await updateAndSyncEvent(updatedMaster, master, setCalendarEvents, syncCalendars)
       await reloadEvents()
     } catch (err) {
       reportError(err)
@@ -102,7 +102,7 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
     closeDialog()
     // The backend's update_event detects synthetic instance ids and creates
     // an override file inheriting the master's metadata.
-    await updateAndSyncEvent(current, original, setCalendarEvents, requestSync)
+    await updateAndSyncEvent(current, original, setCalendarEvents, syncCalendars)
   }
 
   const handleApplyToFuture = async () => {
@@ -132,7 +132,7 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
         reminders: current.reminders,
       }
 
-      await updateAndSyncEvent(updatedMaster, newMaster, setCalendarEvents, requestSync)
+      await updateAndSyncEvent(updatedMaster, newMaster, setCalendarEvents, syncCalendars)
     } catch (err) {
       reportError(err)
     }
@@ -178,7 +178,7 @@ export function RecurrenceEditProvider({ children }: { children: ReactNode }) {
         calendar_slug: current.calendar_slug,
       }
 
-      await updateAndSyncEvent(updatedMaster, master, setCalendarEvents, requestSync)
+      await updateAndSyncEvent(updatedMaster, master, setCalendarEvents, syncCalendars)
 
       // When moving recurring events between calendar, cache gets stale -> reload!
       if (updatedMaster.calendar_slug !== master.calendar_slug) {

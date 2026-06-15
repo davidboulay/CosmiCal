@@ -191,7 +191,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
 
   const { setCalendarEvents, reloadEvents, addOptimisticEvent, resolveOptimisticEvent } =
     useCalEvents()
-  const { requestSync } = useSync()
+  const { syncCalendars } = useSync()
 
   const createDraftEvent = useCallback(async () => {
     if (!draftEvent.calendarId) return
@@ -246,11 +246,11 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
         prev.map((e) => (e.id === optimisticId ? rpcToCalendarEvent(created) : e)),
       )
     }
-    void requestSync()
+    void syncCalendars([draftEvent.calendarId])
   }, [
     draftEvent,
     draftReminders,
-    requestSync,
+    syncCalendars,
     setDefaultDraftEvent,
     setCalendarEvents,
     reloadEvents,
@@ -308,7 +308,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
         // apply, caldir emits CALDIR_CHANGED → reload → the optimistic copy is
         // replaced by the synced event. With auto-sync off it stays visible until
         // the user next syncs.
-        void requestSync()
+        void syncCalendars([snapshot.calendarId ?? ""])
       } catch (e) {
         toast.error("Couldn't create the Google Meet event", {
           description: e instanceof Error ? e.message : String(e),
@@ -319,7 +319,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
   }, [
     draftEvent,
     draftReminders,
-    requestSync,
+    syncCalendars,
     setDefaultDraftEvent,
     addOptimisticEvent,
     resolveOptimisticEvent,

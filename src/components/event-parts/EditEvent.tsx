@@ -5,6 +5,14 @@ import { toast } from "sonner"
 import { DeleteConfirmDialog } from "@/components/event-parts/DeleteConfirmDialog"
 import { EventInfo } from "@/components/event-parts/EventInfo"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 import { rpc } from "@/rpc"
 import type { ResponseStatus } from "@/rpc/bindings"
@@ -44,10 +52,17 @@ export const EditEvent = ({
 }) => {
   const { calendars } = useCalendars()
   const { setActiveEventKey, setCalendarEvents } = useCalEvents()
-  const { requestSync } = useSync()
+  const { syncCalendars } = useSync()
 
   const [dirtyEvent, setDirtyEvent] = useState<CalendarEvent | null>(null)
   const originalEventRef = useRef<CalendarEvent | null>(null)
+  // Optimistic RSVP selection for the buttons. Kept separate from dirtyEvent so
+  // it doesn't count as an edit (which would save on close and recreate a
+  // stuck push); RSVP goes to the server on its own path.
+  const [rsvpOverride, setRsvpOverride] = useState<ResponseStatus | null>(null)
+  // Holds the chosen response while we ask "this event vs all events" for a
+  // recurring RSVP.
+  const [pendingRsvp, setPendingRsvp] = useState<ResponseStatus | null>(null)
 
   const { triggerDelete, deleteDialogProps } = useDeleteEvent()
 
@@ -55,6 +70,7 @@ export const EditEvent = ({
     if (event) {
       setDirtyEvent(event)
       originalEventRef.current = event
+      setRsvpOverride(null)
     }
   }, [event?.id])
 
@@ -137,12 +153,25 @@ export const EditEvent = ({
   const recurrenceRRule = effectiveRecurrence ? recurrenceToRRuleSet(effectiveRecurrence) : null
   const calendar = calendars.find((c) => c.slug === calendar_slug)
 
-  const userResponseStatus = getUserResponseStatus(dirtyEvent, calendars)
-  const isAttendee = userResponseStatus !== null
+  const baseResponseStatus = getUserResponseStatus(dirtyEvent, calendars)
+  // Show the optimistic selection if the user just RSVP'd, else the real status.
+  const userResponseStatus = rsvpOverride ?? baseResponseStatus
+  const isAttendee = baseResponseStatus !== null
   const isPendingInvite = userResponseStatus === "needs-action"
   const isReadonly = isEventReadonly(dirtyEvent, calendars)
 
-  const handleRsvp = async (response: ResponseStatus) => {
+  // Recurring events ask whether to respond to just this occurrence or the
+  // whole series (like Google); single events respond directly.
+  const handleRsvp = (response: ResponseStatus) => {
+    if (!dirtyEvent) return
+    if (dirtyEvent.recurring_event_id !== null) {
+      setPendingRsvp(response)
+      return
+    }
+    void doRsvp(response, "instance")
+  }
+
+  const doRsvp = async (response: ResponseStatus, scope: "instance" | "all") => {
     if (!dirtyEvent) return
 
     // Optimistically reflect the new response on this event so the grid updates
@@ -167,12 +196,15 @@ export const EditEvent = ({
         ),
       )
     }
+    // Color the RSVP buttons immediately; leave the editor open so the change
+    // is visible (no auto-close).
+    setRsvpOverride(response)
 
     try {
-      await rpc.caldir.rsvp(dirtyEvent.calendar_slug, dirtyEvent.id, response)
-      void requestSync()
-      setActiveEventKey(null)
+      await rpc.caldir.rsvp(dirtyEvent.calendar_slug, dirtyEvent.id, response, scope)
+      void syncCalendars([dirtyEvent.calendar_slug])
     } catch (err) {
+      setRsvpOverride(null)
       const message = err instanceof Error ? err.message : String(err)
       toast.error("Failed to respond to invite", { description: message })
       console.error("rsvp failed:", err)
@@ -261,6 +293,38 @@ export const EditEvent = ({
       />
 
       <DeleteConfirmDialog {...deleteDialogProps} />
+
+      <Dialog open={pendingRsvp !== null} onOpenChange={(o) => !o && setPendingRsvp(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Respond to recurring event</DialogTitle>
+            <DialogDescription>
+              This is a repeating event. Apply your response to just this event or the whole series?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const r = pendingRsvp
+                setPendingRsvp(null)
+                if (r) void doRsvp(r, "instance")
+              }}
+            >
+              This event
+            </Button>
+            <Button
+              onClick={() => {
+                const r = pendingRsvp
+                setPendingRsvp(null)
+                if (r) void doRsvp(r, "all")
+              }}
+            >
+              All events
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

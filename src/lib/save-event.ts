@@ -6,14 +6,14 @@ import { rpc } from "@/rpc"
 import { eventKey, recurrenceToRpc, type CalendarEvent } from "@/lib/cal-events"
 import { toRpcEventTime } from "@/lib/event-time/rpc"
 
-export type RequestSync = () => Promise<void>
+export type SyncCalendars = (slugs: string[]) => Promise<void>
 export type SetCalendarEvents = Dispatch<SetStateAction<CalendarEvent[]>>
 
 export async function updateAndSyncEvent(
   current: CalendarEvent,
   original: CalendarEvent,
   setCalendarEvents: SetCalendarEvents,
-  requestSync: RequestSync,
+  syncCalendars: SyncCalendars,
 ): Promise<void> {
   // Match on the original identity: an edit may move the event to a different
   // calendar (new_calendar_slug), changing its eventKey from under us.
@@ -35,7 +35,8 @@ export async function updateAndSyncEvent(
       attendees: current.attendees,
       conference_url: current.conference_url,
     })
-    await requestSync()
+    // Sync just the affected calendar(s) — both for a move.
+    await syncCalendars([original.calendar_slug, current.calendar_slug])
   } catch (err) {
     // Roll back: the optimistic pass replaced the row with `current`, so find it
     // by `current`'s key and restore the original.

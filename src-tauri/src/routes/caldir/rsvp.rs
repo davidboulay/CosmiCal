@@ -9,6 +9,7 @@ pub(super) async fn handler(
     calendar_slug: String,
     event_id: String,
     response: String,
+    scope: String,
 ) -> TauResult<()> {
     let caldir = load_caldir()?;
     let calendar = caldir.calendar(&calendar_slug).map_err(|e| e.to_string())?;
@@ -16,7 +17,15 @@ pub(super) async fn handler(
     let user_email = calendar_self_email(&calendar)
         .ok_or_else(|| "Calendar has no account email".to_string())?;
 
-    let instance_id = EventInstanceId::from(event_id.as_str());
+    let parsed = EventInstanceId::from(event_id.as_str());
+    // "all" responds to the whole series (the master), so drop the recurrence
+    // id; "instance" (default) responds to just this occurrence.
+    let respond_to_series = scope == "all";
+    let instance_id = if respond_to_series {
+        EventInstanceId::new(parsed.uid().clone(), None)
+    } else {
+        parsed
+    };
     let status = parse_participation_status(&response)?;
 
     let is_google = calendar

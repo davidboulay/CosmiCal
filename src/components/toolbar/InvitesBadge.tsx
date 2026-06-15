@@ -37,7 +37,7 @@ export function InvitesBadge({ persistent = false }: { persistent?: boolean }) {
 
   const isMd = useBreakpoint("md")
   const { timeFormat } = useSettings()
-  const { requestSync } = useSync()
+  const { syncCalendars } = useSync()
 
   // In the toolbar we hide the badge when there's nothing to respond to. The
   // sidebar variant is always shown (gray at 0, red when there are invites).
@@ -48,8 +48,10 @@ export function InvitesBadge({ persistent = false }: { persistent?: boolean }) {
   const handleRsvp = async (invite: CalendarEvent, response: ResponseStatus) => {
     setInvites((prev) => prev.filter((i) => eventKey(i) !== eventKey(invite)))
     try {
-      await rpc.caldir.rsvp(invite.calendar_slug, invite.id, response)
-      void requestSync()
+      // Responding from the invites list applies to the whole invitation
+      // (the series for a recurring event).
+      await rpc.caldir.rsvp(invite.calendar_slug, invite.id, response, "all")
+      void syncCalendars([invite.calendar_slug])
     } catch (e) {
       console.error("RSVP failed:", e)
     }
