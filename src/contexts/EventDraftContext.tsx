@@ -63,6 +63,14 @@ interface EventDraftContextType {
 
   draftPopoverOpen: boolean
   setDraftPopoverOpen: (open: boolean) => void
+  /** True while the "Add or discard?" confirmation is showing. */
+  confirmDiscardOpen: boolean
+  /** Close the draft, prompting first if it has content. */
+  requestCloseDraft: () => void
+  /** Discard the draft (used by the confirmation dialog). */
+  discardDraft: () => void
+  /** Create the draft event then close (used by the confirmation dialog). */
+  confirmAddDraft: () => void
 
   defaultCalendarId: string | null
 
@@ -111,6 +119,7 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
   const { defaultCalendar, defaultReminders } = useSettings()
   const [isDrafting, setIsDrafting] = useState(false)
   const [draftPopoverOpen, _setDraftPopoverOpen] = useState(false)
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false)
 
   const defaultCalendarId =
     (defaultCalendar && calendars.some((c) => c.slug === defaultCalendar)
@@ -325,6 +334,33 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
     resolveOptimisticEvent,
   ])
 
+  // Closing a draft that has content asks first (Add / Discard) instead of
+  // silently dropping it. Routed through the context so both the popover and
+  // the calendar-grid click-away use the same prompt.
+  const draftHasContent = useCallback(
+    () =>
+      !!(
+        draftEvent.summary?.trim() ||
+        draftEvent.location?.trim() ||
+        draftEvent.description?.trim() ||
+        draftEvent.attendees.length
+      ),
+    [draftEvent],
+  )
+  const requestCloseDraft = useCallback(() => {
+    if (draftHasContent()) setConfirmDiscardOpen(true)
+    else setDraftPopoverOpen(false)
+  }, [draftHasContent, setDraftPopoverOpen])
+  const discardDraft = useCallback(() => {
+    setConfirmDiscardOpen(false)
+    setDraftPopoverOpen(false)
+  }, [setDraftPopoverOpen])
+  const confirmAddDraft = useCallback(() => {
+    setConfirmDiscardOpen(false)
+    void createDraftEvent()
+    setDraftPopoverOpen(false)
+  }, [createDraftEvent, setDraftPopoverOpen])
+
   const textValue = useMemo<EventTextContextType>(() => ({ text, setText }), [text, setText])
 
   const draftValue = useMemo<EventDraftContextType>(
@@ -333,6 +369,10 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
       setIsDrafting,
       draftPopoverOpen,
       setDraftPopoverOpen,
+      confirmDiscardOpen,
+      requestCloseDraft,
+      discardDraft,
+      confirmAddDraft,
       defaultCalendarId,
       draftEvent,
       setDraftEvent,
@@ -345,6 +385,10 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
     [
       isDrafting,
       draftPopoverOpen,
+      confirmDiscardOpen,
+      requestCloseDraft,
+      discardDraft,
+      confirmAddDraft,
       defaultCalendarId,
       draftEvent,
       draftReminders,

@@ -1,3 +1,4 @@
+import { openUrl } from "@tauri-apps/plugin-opener"
 import { format, startOfDay, startOfWeek } from "date-fns"
 import { RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
@@ -10,13 +11,14 @@ import { useCalEvents } from "@/contexts/CalEventsContext"
 import { useCalendarNavigation, useCalendars } from "@/contexts/CalendarStateContext"
 import { useCreateEventGate } from "@/contexts/CreateEventGateContext"
 import { useEventDraft } from "@/contexts/EventDraftContext"
+import { useRecurrenceEdit } from "@/contexts/RecurrenceEditContext"
 import { useSettings } from "@/contexts/SettingsContext"
 
 import type { WeekTimedEventLayout } from "@/hooks/cal-events/useDayRangeLayout"
 import type { AllDayLaneItem } from "@/hooks/cal-events/useMonthEventLayout"
 import type { MonthDay } from "@/hooks/cal-events/useMonthGrid"
 import { useWeather } from "@/hooks/useWeather"
-import { eventKey, type CalendarEvent } from "@/lib/cal-events"
+import { eventKey, withDates, type CalendarEvent } from "@/lib/cal-events"
 import { setDraftAnchor } from "@/lib/draft-anchor"
 import {
   addDays,
@@ -26,9 +28,11 @@ import {
   fromDate,
   getLocalTzid,
   getZoneDisplayName,
+  withRangeEndWallclockTime,
+  withRangeStartWallclockTime,
   type EventTime,
 } from "@/lib/event-time"
-import { isDeclinedEvent, isPendingEvent } from "@/lib/event-utils"
+import { isDeclinedEvent, isEventReadonly, isPendingEvent } from "@/lib/event-utils"
 import { cn } from "@/lib/utils"
 import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather"
 
@@ -97,10 +101,29 @@ export function WeekTimeGrid({
   const { calendars } = useCalendars()
   const { registerScrollToNow, setNowLineVisible } = useCalendarNavigation()
   const { activeEvent, setActiveEventKey } = useCalEvents()
-  const { draftPopoverOpen, setDraftEvent, setDraftPopoverOpen, setIsDrafting, defaultCalendarId } =
-    useEventDraft()
+  const {
+    draftPopoverOpen,
+    setDraftEvent,
+    setDraftPopoverOpen,
+    setIsDrafting,
+    defaultCalendarId,
+    requestCloseDraft,
+  } = useEventDraft()
   const { canCreate, promptToConnect } = useCreateEventGate()
+  const { requestSave } = useRecurrenceEdit()
   const { timeFormat, extraTimezones, timezoneLabels, allDayVisibleCount } = useSettings()
+
+  // Commit a drag-move/resize: turn the new start/end minutes-of-day into the
+  // event's local wallclock times and save (recurring events prompt this/all).
+  const handleEventTimeChange = useCallback(
+    (event: CalendarEvent, newStartMin: number, newEndMin: number) => {
+      let range = { start: event.start, end: event.end }
+      range = withRangeStartWallclockTime(range, Math.floor(newStartMin / 60), newStartMin % 60)
+      range = withRangeEndWallclockTime(range, Math.floor(newEndMin / 60), newEndMin % 60)
+      requestSave(withDates(event, range.start, range.end), event)
+    },
+    [requestSave],
+  )
 
   // Gutter holds one hour-label column per zone: the extra zones first, then the
   // local zone closest to the grid (matches Google Calendar). Width scales with
@@ -530,10 +553,16 @@ export function WeekTimeGrid({
   // it here, earliest, lets the first click outside cancel instead of creating.
   const popoverOpenRef = useRef(false)
   popoverOpenRef.current = draftPopoverOpen || !!activeEvent
+  // Track the draft separately so a click-away can route through its
+  // Add/Discard confirm instead of silently dropping it.
+  const draftOpenRef = useRef(false)
+  draftOpenRef.current = draftPopoverOpen
   const popoverOpenAtPressRef = useRef(false)
+  const draftOpenAtPressRef = useRef(false)
   useEffect(() => {
     const onPointerDown = () => {
       popoverOpenAtPressRef.current = popoverOpenRef.current
+      draftOpenAtPressRef.current = draftOpenRef.current
     }
     window.addEventListener("pointerdown", onPointerDown, { capture: true })
     return () => window.removeEventListener("pointerdown", onPointerDown, { capture: true })
@@ -543,17 +572,23 @@ export function WeekTimeGrid({
   // let dragging grow/shrink it in 15-minute steps. A plain click (no drag)
   // keeps the default length. The editor popover opens on release.
   const startDragCreate = (day: Date, e: React.MouseEvent<HTMLElement>) => {
-    // Consume the "was a popover open at press" flag captured at pointerdown.
+    // Consume the "was a popover open at press" flags captured at pointerdown.
     const wasPopoverOpen = popoverOpenAtPressRef.current
+    const wasDraftOpen = draftOpenAtPressRef.current
     popoverOpenAtPressRef.current = false
+    draftOpenAtPressRef.current = false
 
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest("[data-event-clickable]")) return
     // First click outside an open popover just dismisses it — don't also start
-    // creating another event.
+    // creating another event. A new-event draft routes through its Add/Discard
+    // confirm rather than being dropped silently.
     if (wasPopoverOpen) {
-      setDraftPopoverOpen(false)
-      setActiveEventKey(null)
+      if (wasDraftOpen) {
+        requestCloseDraft()
+      } else {
+        setActiveEventKey(null)
+      }
       return
     }
     if (!canCreate) {
@@ -835,6 +870,9 @@ export function WeekTimeGrid({
                       isDraft={layout.event === draftEvent}
                       dimmed={dimmed}
                       onEventClick={onEventClick}
+                      onTimeChange={
+                        isEventReadonly(layout.event, calendars) ? undefined : handleEventTimeChange
+                      }
                     />
                   )
                 })}
@@ -1072,6 +1110,7 @@ const DayHeaders = ({
   onDayClick: (date: Date) => void
 }) => {
   const weather = useWeather()
+  const { weatherLocation } = useSettings()
 
   return days.map((day) => {
     const w = weather.get(day.dateKey)
@@ -1105,15 +1144,21 @@ const DayHeaders = ({
         </div>
 
         {w && (
-          <div
-            className="flex items-center gap-1 text-[10px] text-muted-foreground leading-none"
-            title={weatherCodeToLabel(w.code)}
+          <button
+            type="button"
+            className="flex items-center gap-1 text-[10px] text-muted-foreground leading-none cursor-pointer hover:text-foreground transition-colors"
+            title={`${weatherCodeToLabel(w.code)} — open forecast`}
+            onClick={(e) => {
+              e.stopPropagation()
+              const q = weatherLocation.trim() ? `weather ${weatherLocation.trim()}` : "weather"
+              void openUrl(`https://www.google.com/search?q=${encodeURIComponent(q)}`)
+            }}
           >
             <span className="text-sm leading-none">{weatherCodeToEmoji(w.code)}</span>
             <span>
               {w.tempMax}°/{w.tempMin}°
             </span>
-          </div>
+          </button>
         )}
       </div>
     )

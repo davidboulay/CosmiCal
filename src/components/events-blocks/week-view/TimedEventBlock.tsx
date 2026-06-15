@@ -6,7 +6,7 @@ import { UntitledEventText } from "@/components/ui/untitled-event-text"
 import { useSettings } from "@/contexts/SettingsContext"
 
 import type { WeekTimedEventLayout } from "@/hooks/cal-events/useDayRangeLayout"
-import { eventKey } from "@/lib/cal-events"
+import { eventKey, type CalendarEvent } from "@/lib/cal-events"
 import { setEventAnchor } from "@/lib/event-anchor"
 import { getEventBlockClasses, getEventBlockColors, getEventBlockStyle } from "@/lib/event-styles"
 import { formatTime } from "@/lib/event-time"
@@ -21,6 +21,9 @@ const MIN_BLOCK_PX = 16
 // shares one line with the (truncated) title.
 const TWO_LINE_MIN_PX = 2 * LINE_PX + PAD_PX
 
+const DAY_MIN = 24 * 60
+const SNAP_MIN = 15
+
 function WeekTimedEventImpl({
   layout,
   hourHeight,
@@ -30,6 +33,7 @@ function WeekTimedEventImpl({
   isDraft,
   dimmed,
   onEventClick,
+  onTimeChange,
 }: {
   layout: WeekTimedEventLayout
   hourHeight: number
@@ -39,10 +43,69 @@ function WeekTimedEventImpl({
   isDraft: boolean
   dimmed: boolean
   onEventClick: (eventKey: string) => void
+  /** When provided, the block can be dragged to move and its edge dragged to
+   * resize; reports the new start/end minutes-of-day. Omitted for events that
+   * can't be edited (read-only calendars, invites you don't organize). */
+  onTimeChange?: (event: CalendarEvent, newStartMin: number, newEndMin: number) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [contextOpen, setContextOpen] = useState(false)
   const { timeFormat } = useSettings()
+
+  // Live drag offsets (minutes); null when not dragging.
+  const [dragDelta, setDragDelta] = useState<{ start: number; end: number } | null>(null)
+  const dragRef = useRef<{ start: number; end: number; moved: boolean } | null>(null)
+  const justDraggedRef = useRef(false)
+
+  const baseStartMin = Math.round((layout.top / 100) * DAY_MIN)
+  const baseEndMin = baseStartMin + layout.durationMinutes
+
+  const beginDrag = (mode: "move" | "resize", e: React.MouseEvent) => {
+    if (!onTimeChange || isDraft || e.button !== 0) return
+    e.stopPropagation()
+    const startY = e.clientY
+    const pxPerMin = hourHeight / 60
+    dragRef.current = { start: 0, end: 0, moved: false }
+
+    const onMove = (ev: MouseEvent) => {
+      const st = dragRef.current
+      if (!st) return
+      const dyMin = Math.round((ev.clientY - startY) / pxPerMin / SNAP_MIN) * SNAP_MIN
+      if (dyMin !== 0) st.moved = true
+      if (mode === "move") {
+        // Clamp so the block stays within the day, keeping its duration.
+        const delta = Math.max(-baseStartMin, Math.min(dyMin, DAY_MIN - baseEndMin))
+        st.start = delta
+        st.end = delta
+      } else {
+        // Resize the end; never shorter than one snap step or past midnight.
+        const delta = Math.max(
+          SNAP_MIN - layout.durationMinutes,
+          Math.min(dyMin, DAY_MIN - baseEndMin),
+        )
+        st.start = 0
+        st.end = delta
+      }
+      setDragDelta({ start: st.start, end: st.end })
+    }
+
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+      document.body.style.userSelect = ""
+      const st = dragRef.current
+      dragRef.current = null
+      setDragDelta(null)
+      if (st && st.moved) {
+        justDraggedRef.current = true // suppress the click that follows mouseup
+        onTimeChange(layout.event, baseStartMin + st.start, baseEndMin + st.end)
+      }
+    }
+
+    document.body.style.userSelect = "none"
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+  }
 
   // Cascade layout: each overlap depth indents from the left by a fixed percentage and
   // extends to the right edge, so the earlier/outer event remains fully visible beneath.
@@ -73,6 +136,12 @@ function WeekTimedEventImpl({
   const oneLine = blockPx < TWO_LINE_MIN_PX
   const titleLines = Math.max(1, Math.floor((blockPx - PAD_PX - LINE_PX) / LINE_PX))
 
+  const draggable = !!onTimeChange && !isDraft
+  const effStartMin = baseStartMin + (dragDelta?.start ?? 0)
+  const effEndMin = baseEndMin + (dragDelta?.end ?? 0)
+  const topPct = (effStartMin / DAY_MIN) * 100
+  const heightPct = ((effEndMin - effStartMin) / DAY_MIN) * 100
+
   const inner = (
     <div
       ref={ref}
@@ -83,13 +152,15 @@ function WeekTimedEventImpl({
         hasStripe && "pl-1.5",
         !isDraft && dimmed && "opacity-50",
         isDraft && "font-medium",
+        draggable && "cursor-move",
+        dragDelta && "shadow-lg ring-1 ring-black/10 z-50",
       )}
       style={{
-        top: `${layout.top}%`,
-        height: `max(${layout.height}%, 1rem)`,
+        top: `${topPct}%`,
+        height: `max(${heightPct}%, 1rem)`,
         left: `${leftPercent}%`,
         width: `${widthPercent}%`,
-        zIndex: layout.column,
+        zIndex: dragDelta ? 50 : layout.column,
         border: "1px solid var(--background)",
         ...getEventBlockStyle({
           calendarColor: layout.calendarColor,
@@ -100,11 +171,17 @@ function WeekTimedEventImpl({
           isPending,
         }),
       }}
+      onMouseDown={draggable ? (e) => beginDrag("move", e) : undefined}
       onClick={
         isDraft
           ? undefined
           : (e) => {
               e.stopPropagation()
+              // Don't open the editor when the press was a drag.
+              if (justDraggedRef.current) {
+                justDraggedRef.current = false
+                return
+              }
               setEventAnchor(e.currentTarget)
               onEventClick(eventKey(layout.event))
             }
@@ -114,6 +191,14 @@ function WeekTimedEventImpl({
         <div
           className={cn("absolute left-0 top-0 bottom-0 w-[2px]")}
           style={{ backgroundColor: colors.borderColor }}
+        />
+      )}
+
+      {draggable && (
+        // Bottom-edge grab zone to resize the event's duration.
+        <div
+          className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize"
+          onMouseDown={(e) => beginDrag("resize", e)}
         />
       )}
 

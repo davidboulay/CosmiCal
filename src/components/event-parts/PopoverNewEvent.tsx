@@ -20,19 +20,15 @@ import { ComposeEventInner } from "./ComposeEvent"
 import { useEventPopoverTabTrap } from "./useEventPopoverTabTrap"
 
 export function PopoverNewEvent() {
-  const { draftPopoverOpen, setDraftPopoverOpen, draftEvent, createDraftEvent } = useEventDraft()
-  // When dismissing a draft that has content, confirm rather than silently
-  // discarding it.
-  const [confirmDiscard, setConfirmDiscard] = useState(false)
-  const hasContent = () => !!draftEvent.summary?.trim()
-
-  const requestClose = () => {
-    if (hasContent()) {
-      setConfirmDiscard(true)
-    } else {
-      setDraftPopoverOpen(false)
-    }
-  }
+  const {
+    draftPopoverOpen,
+    setDraftPopoverOpen,
+    draftEvent,
+    confirmDiscardOpen,
+    requestCloseDraft,
+    discardDraft,
+    confirmAddDraft,
+  } = useEventDraft()
   const { activeEvent } = useCalEvents()
   const anchorRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -71,7 +67,7 @@ export function PopoverNewEvent() {
     <Popover
       open={draftPopoverOpen}
       onOpenChange={(open) => {
-        if (!open) requestClose()
+        if (!open) requestCloseDraft()
       }}
     >
       <PopoverAnchor
@@ -119,7 +115,7 @@ export function PopoverNewEvent() {
         />
       </PopoverContent>
 
-      <Dialog open={confirmDiscard} onOpenChange={(o) => !o && setConfirmDiscard(false)}>
+      <Dialog open={confirmDiscardOpen} onOpenChange={(o) => !o && discardDraft()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add this event?</DialogTitle>
@@ -129,24 +125,10 @@ export function PopoverNewEvent() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setConfirmDiscard(false)
-                setDraftPopoverOpen(false)
-              }}
-            >
+            <Button variant="secondary" onClick={discardDraft}>
               Discard
             </Button>
-            <Button
-              onClick={() => {
-                setConfirmDiscard(false)
-                void createDraftEvent()
-                setDraftPopoverOpen(false)
-              }}
-            >
-              Add event
-            </Button>
+            <Button onClick={confirmAddDraft}>Add event</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
