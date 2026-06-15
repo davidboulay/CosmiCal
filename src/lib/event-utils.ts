@@ -4,7 +4,7 @@ import type { CalendarEvent } from "@/lib/cal-events"
 
 /** The user's own address(es) on a calendar, lowercased. Prefers the real
  *  remote email; falls back to the account identifier when no email is set. */
-function calendarSelfEmails(calendar: Calendar | undefined): string[] {
+export function calendarSelfEmails(calendar: Calendar | undefined): string[] {
   if (!calendar) return []
   return [calendar.email, calendar.account]
     .filter((s): s is string => !!s)

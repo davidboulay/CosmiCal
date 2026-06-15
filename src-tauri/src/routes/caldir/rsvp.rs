@@ -2,7 +2,7 @@ use super::helpers::{calendar_self_email, load_caldir};
 use crate::event_cache::EVENT_CACHE;
 use crate::google_meet;
 use crate::routes::TauResult;
-use caldir_core::{EventInstanceId, EventTime, ParticipationStatus};
+use caldir_core::{EventInstanceId, ParticipationStatus};
 use rencal_config::RencalConfig;
 
 pub(super) async fn handler(
@@ -31,13 +31,21 @@ pub(super) async fn handler(
     // forever. The direct patch avoids creating any outgoing change at all.
     if is_google {
         if let Some(refresh) = RencalConfig::load().google_meet_refresh_token {
-            let google_event_id = google_event_id(&instance_id);
+            let ical_uid = instance_id.uid().as_str();
+            let instance_utc = instance_id
+                .recurrence_id()
+                .map(|r| r.as_event_time().to_utc());
+
             let token = google_meet::access_token(&refresh)
                 .await
                 .map_err(|e| e.to_string())?;
             // For a primary Google calendar the calendar id equals the user's
             // address (what `calendar_self_email` returns), which is also the
             // attendee we're updating.
+            let google_event_id =
+                google_meet::resolve_event_id(&token, &user_email, ical_uid, instance_utc)
+                    .await
+                    .map_err(|e| e.to_string())?;
             google_meet::set_response_status(
                 &token,
                 &user_email,
@@ -79,28 +87,6 @@ pub(super) async fn handler(
     EVENT_CACHE.invalidate(&calendar_slug);
 
     Ok(())
-}
-
-/// Map a caldir instance id to the Google Calendar event id. A master is the
-/// UID without the `@google.com` suffix; a single instance is
-/// `{base}_{originalStartUTC}` (basic format — date for all-day, datetime+Z
-/// otherwise), matching Google's instance id scheme.
-fn google_event_id(instance_id: &EventInstanceId) -> String {
-    let uid = instance_id.uid().as_str();
-    let base = uid.strip_suffix("@google.com").unwrap_or(uid).to_string();
-
-    match instance_id.recurrence_id() {
-        Some(rid) => {
-            let et = rid.as_event_time();
-            let utc = et.to_utc();
-            let suffix = match et {
-                EventTime::Date(_) => utc.format("%Y%m%d").to_string(),
-                _ => utc.format("%Y%m%dT%H%M%SZ").to_string(),
-            };
-            format!("{base}_{suffix}")
-        }
-        None => base,
-    }
 }
 
 fn google_response_status(s: ParticipationStatus) -> &'static str {

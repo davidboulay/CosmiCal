@@ -180,6 +180,75 @@ pub async fn get_event(access_token: &str, calendar_id: &str, event_id: &str) ->
     Ok(body)
 }
 
+/// Resolve a caldir iCalUID (+ optional occurrence start, for a single instance)
+/// to the real Google event id. We don't string-munge the UID because the
+/// iCalUID and the event id can differ, and an instance's id encodes the
+/// occurrence. Instead we query `events.list?iCalUID=…` (expanding instances and
+/// matching the occurrence by time when needed), which is robust to that and to
+/// tangled local overrides.
+pub async fn resolve_event_id(
+    access_token: &str,
+    calendar_id: &str,
+    ical_uid: &str,
+    instance_utc: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<String> {
+    let base = format!("{EVENTS_URL}/{}/events", urlencoding(calendar_id));
+    let url = match instance_utc {
+        Some(utc) => {
+            // Bracket the occurrence generously (±36h) to absorb tz/DST skew,
+            // then pick the instance whose start is closest to the target.
+            let tmin = (utc - chrono::Duration::hours(36)).to_rfc3339();
+            let tmax = (utc + chrono::Duration::hours(36)).to_rfc3339();
+            format!(
+                "{base}?iCalUID={}&singleEvents=true&maxResults=50&timeMin={}&timeMax={}",
+                urlencoding(ical_uid),
+                urlencoding(&tmin),
+                urlencoding(&tmax)
+            )
+        }
+        None => format!("{base}?iCalUID={}&singleEvents=false&maxResults=5", urlencoding(ical_uid)),
+    };
+
+    let res = reqwest::Client::new()
+        .get(&url)
+        .bearer_auth(access_token)
+        .send()
+        .await?;
+    let status = res.status();
+    let body: Value = res.json().await.unwrap_or(Value::Null);
+    if !status.is_success() {
+        return Err(anyhow!("Google events.list (RSVP lookup) {status}: {body}"));
+    }
+    let items = body["items"].as_array().cloned().unwrap_or_default();
+    if items.is_empty() {
+        return Err(anyhow!("event not found on this Google calendar"));
+    }
+
+    match instance_utc {
+        None => items[0]["id"]
+            .as_str()
+            .map(String::from)
+            .ok_or_else(|| anyhow!("event has no id")),
+        Some(utc) => {
+            let target = utc.timestamp();
+            let start_ts = |it: &Value| -> i64 {
+                it["originalStartTime"]["dateTime"]
+                    .as_str()
+                    .or_else(|| it["start"]["dateTime"].as_str())
+                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                    .map(|d| d.timestamp())
+                    .unwrap_or(i64::MAX / 2)
+            };
+            items
+                .iter()
+                .min_by_key(|it| (start_ts(it) - target).abs())
+                .and_then(|it| it["id"].as_str())
+                .map(String::from)
+                .ok_or_else(|| anyhow!("matching occurrence not found"))
+        }
+    }
+}
+
 /// RSVP to a Google event by setting only the signed-in user's
 /// `responseStatus`. Works even when the user isn't the organizer: we GET the
 /// event, change our own attendee entry, and PATCH just the `attendees` array

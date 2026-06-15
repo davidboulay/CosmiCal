@@ -14,7 +14,7 @@ import { useCalendars } from "@/contexts/CalendarStateContext"
 import { useSync } from "@/contexts/SyncContext"
 
 import { useDeleteEvent } from "@/hooks/useDeleteEvent"
-import { withDates, type CalendarEvent } from "@/lib/cal-events"
+import { eventKey, withDates, type CalendarEvent } from "@/lib/cal-events"
 import {
   addMinutes,
   DEFAULT_DURATION_MINS,
@@ -23,7 +23,12 @@ import {
   toAllDay,
   toTimedAtStartOfDay,
 } from "@/lib/event-time"
-import { getUserResponseStatus, isCalendarWritable, isEventReadonly } from "@/lib/event-utils"
+import {
+  calendarSelfEmails,
+  getUserResponseStatus,
+  isCalendarWritable,
+  isEventReadonly,
+} from "@/lib/event-utils"
 import { recurrenceToRRuleSet, rruleToRecurrence } from "@/lib/rrule-utils"
 
 import { TrashIcon } from "@/icons/trash"
@@ -38,7 +43,7 @@ export const EditEvent = ({
   children?: ReactNode
 }) => {
   const { calendars } = useCalendars()
-  const { setActiveEventKey } = useCalEvents()
+  const { setActiveEventKey, setCalendarEvents } = useCalEvents()
   const { requestSync } = useSync()
 
   const [dirtyEvent, setDirtyEvent] = useState<CalendarEvent | null>(null)
@@ -139,6 +144,29 @@ export const EditEvent = ({
 
   const handleRsvp = async (response: ResponseStatus) => {
     if (!dirtyEvent) return
+
+    // Optimistically reflect the new response on this event so the grid updates
+    // immediately instead of after the next sync pull (the RSVP itself goes to
+    // the server in the background).
+    const selfEmails = calendarSelfEmails(
+      calendars.find((c) => c.slug === dirtyEvent.calendar_slug),
+    )
+    if (selfEmails.length > 0) {
+      setCalendarEvents((prev) =>
+        prev.map((e) =>
+          eventKey(e) === eventKey(dirtyEvent)
+            ? {
+                ...e,
+                attendees: e.attendees.map((a) =>
+                  selfEmails.includes(a.email.toLowerCase())
+                    ? { ...a, response_status: response }
+                    : a,
+                ),
+              }
+            : e,
+        ),
+      )
+    }
 
     try {
       await rpc.caldir.rsvp(dirtyEvent.calendar_slug, dirtyEvent.id, response)
