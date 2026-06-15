@@ -180,6 +180,62 @@ pub async fn get_event(access_token: &str, calendar_id: &str, event_id: &str) ->
     Ok(body)
 }
 
+/// RSVP to a Google event by setting only the signed-in user's
+/// `responseStatus`. Works even when the user isn't the organizer: we GET the
+/// event, change our own attendee entry, and PATCH just the `attendees` array
+/// (Google permits an attendee to change their own response without being the
+/// organizer — unlike caldir's full-event push, which Google rejects as a
+/// shared-property change). `response_status` is Google's vocabulary:
+/// "accepted" | "declined" | "tentative" | "needsAction".
+pub async fn set_response_status(
+    access_token: &str,
+    calendar_id: &str,
+    event_id: &str,
+    self_email: &str,
+    response_status: &str,
+) -> Result<()> {
+    let event = get_event(access_token, calendar_id, event_id).await?;
+    let mut attendees = event["attendees"].as_array().cloned().unwrap_or_default();
+
+    let mut found = false;
+    for a in attendees.iter_mut() {
+        let is_self = a["self"].as_bool() == Some(true)
+            || a["email"]
+                .as_str()
+                .is_some_and(|e| e.eq_ignore_ascii_case(self_email));
+        if is_self {
+            a["responseStatus"] = json!(response_status);
+            found = true;
+        }
+    }
+    if !found {
+        attendees.push(json!({
+            "email": self_email,
+            "responseStatus": response_status,
+            "self": true,
+        }));
+    }
+
+    // PATCH only the attendees array. sendUpdates=none avoids emailing everyone.
+    let url = format!(
+        "{EVENTS_URL}/{}/events/{}?sendUpdates=none",
+        urlencoding(calendar_id),
+        urlencoding(event_id)
+    );
+    let res = reqwest::Client::new()
+        .patch(&url)
+        .bearer_auth(access_token)
+        .json(&json!({ "attendees": attendees }))
+        .send()
+        .await?;
+    let status = res.status();
+    if !status.is_success() {
+        let body: Value = res.json().await.unwrap_or(Value::Null);
+        return Err(anyhow!("Google events.patch (RSVP) {status}: {body}"));
+    }
+    Ok(())
+}
+
 /// The Meet URL from a created-event response, if present.
 pub fn meet_link(created: &Value) -> Option<String> {
     if let Some(link) = created["hangoutLink"].as_str() {

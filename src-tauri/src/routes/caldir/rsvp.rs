@@ -1,7 +1,9 @@
 use super::helpers::{calendar_self_email, load_caldir};
 use crate::event_cache::EVENT_CACHE;
+use crate::google_meet;
 use crate::routes::TauResult;
-use caldir_core::{EventInstanceId, ParticipationStatus};
+use caldir_core::{EventInstanceId, EventTime, ParticipationStatus};
+use rencal_config::RencalConfig;
 
 pub(super) async fn handler(
     calendar_slug: String,
@@ -17,7 +19,42 @@ pub(super) async fn handler(
     let instance_id = EventInstanceId::from(event_id.as_str());
     let status = parse_participation_status(&response)?;
 
-    // Is recurring instance:
+    let is_google = calendar
+        .remote_config()
+        .map(|rc| rc.provider_slug().as_str() == "google")
+        .unwrap_or(false);
+
+    // Google: RSVP straight through the Calendar API, changing only our own
+    // responseStatus. caldir's local update bumps SEQUENCE and pushes the whole
+    // event, which Google rejects for events you don't organize ("Shared
+    // properties can only be changed by the organizer") and then retries
+    // forever. The direct patch avoids creating any outgoing change at all.
+    if is_google {
+        if let Some(refresh) = RencalConfig::load().google_meet_refresh_token {
+            let google_event_id = google_event_id(&instance_id);
+            let token = google_meet::access_token(&refresh)
+                .await
+                .map_err(|e| e.to_string())?;
+            // For a primary Google calendar the calendar id equals the user's
+            // address (what `calendar_self_email` returns), which is also the
+            // attendee we're updating.
+            google_meet::set_response_status(
+                &token,
+                &user_email,
+                &google_event_id,
+                &user_email,
+                google_response_status(status),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+
+            EVENT_CACHE.invalidate(&calendar_slug);
+            return Ok(());
+        }
+        // Not connected to Google OAuth — fall through to the caldir path.
+    }
+
+    // Non-Google (e.g. iCloud) or not connected: update locally and let sync push.
     if instance_id.recurrence_id().is_some() {
         let mut result = Ok(());
 
@@ -42,6 +79,37 @@ pub(super) async fn handler(
     EVENT_CACHE.invalidate(&calendar_slug);
 
     Ok(())
+}
+
+/// Map a caldir instance id to the Google Calendar event id. A master is the
+/// UID without the `@google.com` suffix; a single instance is
+/// `{base}_{originalStartUTC}` (basic format — date for all-day, datetime+Z
+/// otherwise), matching Google's instance id scheme.
+fn google_event_id(instance_id: &EventInstanceId) -> String {
+    let uid = instance_id.uid().as_str();
+    let base = uid.strip_suffix("@google.com").unwrap_or(uid).to_string();
+
+    match instance_id.recurrence_id() {
+        Some(rid) => {
+            let et = rid.as_event_time();
+            let utc = et.to_utc();
+            let suffix = match et {
+                EventTime::Date(_) => utc.format("%Y%m%d").to_string(),
+                _ => utc.format("%Y%m%dT%H%M%SZ").to_string(),
+            };
+            format!("{base}_{suffix}")
+        }
+        None => base,
+    }
+}
+
+fn google_response_status(s: ParticipationStatus) -> &'static str {
+    match s {
+        ParticipationStatus::Accepted => "accepted",
+        ParticipationStatus::Declined => "declined",
+        ParticipationStatus::Tentative => "tentative",
+        ParticipationStatus::NeedsAction => "needsAction",
+    }
 }
 
 fn parse_participation_status(s: &str) -> Result<ParticipationStatus, String> {
