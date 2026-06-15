@@ -25,6 +25,10 @@ use taurpc::Router;
 /// deep-link token "<startEpochMs>::<eventInstanceId>".
 const OPEN_EVENT: &str = "open-event";
 
+/// Frontend event fired from the tray "Settings" item; the main window opens
+/// the Settings window in response (it owns the window-creation logic).
+const OPEN_SETTINGS_EVENT: &str = "open-settings";
+
 /// Parse `--open-event=<token>` from the process arguments, if present.
 fn open_event_token() -> Option<String> {
     std::env::args()
@@ -257,8 +261,10 @@ pub async fn run() {
                 // AppIndicator (Linux) only shows an icon that has a menu, so we
                 // always attach one (Open / Quit).
                 let open_item = MenuItem::with_id(app, "tray_open", "Open CosmiCal", true, None::<&str>)?;
+                let settings_item =
+                    MenuItem::with_id(app, "tray_settings", "Settings", true, None::<&str>)?;
                 let quit_item = MenuItem::with_id(app, "tray_quit", "Quit", true, None::<&str>)?;
-                let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+                let menu = Menu::with_items(app, &[&open_item, &settings_item, &quit_item])?;
 
                 let initial = tray::render_day_icon(chrono::Local::now().day(), false);
                 match tauri::tray::TrayIconBuilder::with_id(tray::TRAY_ID)
@@ -269,6 +275,12 @@ pub async fn run() {
                     .show_menu_on_left_click(false)
                     .on_menu_event(move |app, event| match event.id().as_ref() {
                         "tray_open" => show_main(app),
+                        "tray_settings" => {
+                            // Surface the window, then ask the (now-visible) main
+                            // window to open the Settings window.
+                            show_main(app);
+                            let _ = app.emit(OPEN_SETTINGS_EVENT, ());
+                        }
                         "tray_quit" => app.exit(0),
                         _ => {}
                     })

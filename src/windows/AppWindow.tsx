@@ -1,3 +1,5 @@
+import { listen } from "@tauri-apps/api/event"
+import { useEffect } from "react"
 import { Toaster } from "sonner"
 
 import "@/global.css"
@@ -10,6 +12,7 @@ import { Main } from "@/components/main/Main"
 import { GlobalShortcuts } from "@/components/shortcuts/GlobalShortcuts"
 import { Sidebar } from "@/components/sidebar/Sidebar"
 import { MassDeleteConfirmDialog } from "@/components/sync/MassDeleteConfirmDialog"
+import { openSettingsWindow } from "@/components/toolbar/SettingsButton"
 import { DragRegion } from "@/components/ui/drag-region"
 
 import { AgendaFocusProvider } from "@/contexts/AgendaFocusContext"
@@ -47,6 +50,16 @@ function App() {
   const { calendarView, setCalendarView } = useCalendarView()
 
   const isMd = useBreakpoint("md")
+
+  // Open the Settings window when the tray "Settings" item is clicked. Lives in
+  // the main window (which owns window creation); the settings window itself
+  // doesn't render <App />, so this won't double-fire.
+  useEffect(() => {
+    const unlisten = listen("open-settings", () => void openSettingsWindow())
+    return () => {
+      void unlisten.then((fn) => fn())
+    }
+  }, [])
 
   return (
     <main className="flex h-screen overflow-hidden">

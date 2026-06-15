@@ -136,17 +136,23 @@ pub fn relaunch_for_update() {
         log::warn!("update: current_exe() failed; cannot relaunch");
         return;
     };
+    // apt replaced the binary file, so /proc/self/exe (what current_exe reads)
+    // now points at the old, unlinked inode and the path comes back with a
+    // literal " (deleted)" suffix. Exec'ing that fails. Strip it — the new
+    // binary lives at the same path (e.g. /usr/bin/rencal).
+    let exe_str = exe.to_string_lossy();
+    let exe_path = exe_str.strip_suffix(" (deleted)").unwrap_or(&exe_str).to_string();
     let mut cmd = std::process::Command::new("sh");
     // `$0` carries the exe path as a positional arg, so paths with spaces or
     // shell metacharacters pass through verbatim (no string interpolation).
-    cmd.arg("-c").arg("sleep 1; exec \"$0\"").arg(&exe);
+    cmd.arg("-c").arg("sleep 1; exec \"$0\"").arg(&exe_path);
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
         cmd.process_group(0);
     }
     match cmd.spawn() {
-        Ok(_) => log::info!("update: relaunch helper spawned for {}", exe.display()),
+        Ok(_) => log::info!("update: relaunch helper spawned for {exe_path}"),
         Err(e) => log::warn!("update: could not spawn relaunch helper: {e}"),
     }
 }
