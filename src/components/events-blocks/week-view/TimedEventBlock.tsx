@@ -61,7 +61,7 @@ function WeekTimedEventImpl({
   const baseEndMin = baseStartMin + layout.durationMinutes
 
   const beginDrag = (mode: "move" | "resize", e: React.MouseEvent) => {
-    if (!onTimeChange || isDraft || e.button !== 0) return
+    if (!onTimeChange || e.button !== 0) return
     e.stopPropagation()
     const startY = e.clientY
     const pxPerMin = hourHeight / 60
@@ -136,16 +136,18 @@ function WeekTimedEventImpl({
   const oneLine = blockPx < TWO_LINE_MIN_PX
   const titleLines = Math.max(1, Math.floor((blockPx - PAD_PX - LINE_PX) / LINE_PX))
 
-  const draggable = !!onTimeChange && !isDraft
+  const draggable = !!onTimeChange
   const effStartMin = baseStartMin + (dragDelta?.start ?? 0)
   const effEndMin = baseEndMin + (dragDelta?.end ?? 0)
   const topPct = (effStartMin / DAY_MIN) * 100
   const heightPct = ((effEndMin - effStartMin) / DAY_MIN) * 100
 
+  // A draggable draft is also marked clickable so a press on it doesn't register
+  // as "outside" and dismiss the compose popover mid-drag.
   const inner = (
     <div
       ref={ref}
-      data-event-clickable={!isDraft || undefined}
+      data-event-clickable={!isDraft || draggable || undefined}
       className={cn(
         getEventBlockClasses(highlighted, isDeclined),
         "absolute overflow-hidden rounded px-1",

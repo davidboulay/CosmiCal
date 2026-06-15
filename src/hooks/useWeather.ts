@@ -2,14 +2,21 @@ import { useEffect, useState } from "react"
 
 import { useSettings } from "@/contexts/SettingsContext"
 
-import { getForecast, type DailyWeather } from "@/lib/weather"
+import { getForecast, type DailyWeather, type Located } from "@/lib/weather"
 
-// Daily forecast keyed by "YYYY-MM-DD". Empty when weather is disabled or the
+export interface WeatherData {
+  /** Daily forecast keyed by "YYYY-MM-DD". */
+  forecast: Map<string, DailyWeather>
+  /** Resolved location (with coordinates) for deep-linking to a weather site. */
+  location: Located | null
+}
+
+// Daily forecast + resolved location. Empty when weather is disabled or the
 // location can't be resolved. Refetches when the location override changes and
 // hourly while mounted.
-export function useWeather(): Map<string, DailyWeather> {
+export function useWeather(): WeatherData {
   const { weatherEnabled, weatherLocation, weatherAutoLocation, weatherUnit } = useSettings()
-  const [data, setData] = useState<Map<string, DailyWeather>>(() => new Map())
+  const [data, setData] = useState<WeatherData>(() => ({ forecast: new Map(), location: null }))
 
   // In auto mode the location is detected from IP (empty query); the manual
   // value is ignored but kept for when the user switches back.
@@ -17,14 +24,14 @@ export function useWeather(): Map<string, DailyWeather> {
 
   useEffect(() => {
     if (!weatherEnabled) {
-      setData(new Map())
+      setData({ forecast: new Map(), location: null })
       return
     }
 
     let cancelled = false
     const load = async () => {
-      const days = await getForecast(effectiveLocation, weatherUnit)
-      if (!cancelled) setData(new Map(days.map((d) => [d.dateKey, d])))
+      const { days, location } = await getForecast(effectiveLocation, weatherUnit)
+      if (!cancelled) setData({ forecast: new Map(days.map((d) => [d.dateKey, d])), location })
     }
 
     // Reload hourly: re-detects the location in auto mode, so the forecast

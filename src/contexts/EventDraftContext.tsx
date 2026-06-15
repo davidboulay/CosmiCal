@@ -348,18 +348,27 @@ export function EventDraftProvider({ children }: { children: ReactNode }) {
     [draftEvent],
   )
   const requestCloseDraft = useCallback(() => {
-    if (draftHasContent()) setConfirmDiscardOpen(true)
-    else setDraftPopoverOpen(false)
+    if (draftHasContent()) {
+      // Hide the compose popover but KEEP the draft data, then show the
+      // Add/Discard prompt as a standalone dialog. We close the popover with the
+      // raw setter (not the wrapper) so the draft isn't reset — the dialog still
+      // needs the summary, and "Add" still needs the full draft to create it.
+      _setDraftPopoverOpen(false)
+      setConfirmDiscardOpen(true)
+    } else {
+      setDraftPopoverOpen(false)
+    }
   }, [draftHasContent, setDraftPopoverOpen])
   const discardDraft = useCallback(() => {
     setConfirmDiscardOpen(false)
-    setDraftPopoverOpen(false)
-  }, [setDraftPopoverOpen])
+    _setDraftPopoverOpen(false)
+    setDefaultDraftEvent()
+  }, [setDefaultDraftEvent])
   const confirmAddDraft = useCallback(() => {
     setConfirmDiscardOpen(false)
+    // createDraftEvent resets the draft and closes via setDefaultDraftEvent.
     void createDraftEvent()
-    setDraftPopoverOpen(false)
-  }, [createDraftEvent, setDraftPopoverOpen])
+  }, [createDraftEvent])
 
   const textValue = useMemo<EventTextContextType>(() => ({ text, setText }), [text, setText])
 

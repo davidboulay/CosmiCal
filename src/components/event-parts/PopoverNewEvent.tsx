@@ -64,57 +64,62 @@ export function PopoverNewEvent() {
   useEventPopoverTabTrap({ enabled: draftPopoverOpen, contentRef })
 
   return (
-    <Popover
-      open={draftPopoverOpen}
-      onOpenChange={(open) => {
-        if (!open) requestCloseDraft()
-      }}
-    >
-      <PopoverAnchor
-        ref={anchorRef}
-        className="fixed pointer-events-none"
-        style={{ top: pos.top, left: pos.left, width: pos.width, height: 0 }}
-      />
-      <PopoverContent
-        ref={contentRef}
-        className="w-[350px] max-h-[80vh] overflow-y-auto p-0 shadow-2xl"
-        side="right"
-        align="center"
-        sideOffset={8}
-        collisionPadding={16}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => {
-          const target = e.target as HTMLElement
-          // Don't dismiss when interacting with a portaled Select dropdown
-          // (calendar/repeat/reminder) inside the compose form.
-          if (target.closest("[data-radix-popper-content-wrapper],[role='listbox']")) {
-            e.preventDefault()
-            return
-          }
-          if (target.closest("[data-event-clickable]")) {
-            e.preventDefault()
-          } else {
-            window.addEventListener(
-              "click",
-              (ev) => {
-                ev.stopPropagation()
-                ev.preventDefault()
-              },
-              { capture: true, once: true },
-            )
-          }
-        }}
-        onFocusOutside={(e) => {
-          e.preventDefault()
+    <>
+      <Popover
+        open={draftPopoverOpen}
+        onOpenChange={(open) => {
+          if (!open) requestCloseDraft()
         }}
       >
-        <ComposeEventInner
-          summaryRef={summaryRef}
-          onCreated={() => setDraftPopoverOpen(false)}
-          onCancel={() => setDraftPopoverOpen(false)}
+        <PopoverAnchor
+          ref={anchorRef}
+          className="fixed pointer-events-none"
+          style={{ top: pos.top, left: pos.left, width: pos.width, height: 0 }}
         />
-      </PopoverContent>
+        <PopoverContent
+          ref={contentRef}
+          className="w-[350px] max-h-[80vh] overflow-y-auto p-0 shadow-2xl"
+          side="right"
+          align="center"
+          sideOffset={8}
+          collisionPadding={16}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => {
+            const target = e.target as HTMLElement
+            // Don't dismiss when interacting with a portaled Select dropdown
+            // (calendar/repeat/reminder) inside the compose form.
+            if (target.closest("[data-radix-popper-content-wrapper],[role='listbox']")) {
+              e.preventDefault()
+              return
+            }
+            if (target.closest("[data-event-clickable]")) {
+              e.preventDefault()
+            } else {
+              window.addEventListener(
+                "click",
+                (ev) => {
+                  ev.stopPropagation()
+                  ev.preventDefault()
+                },
+                { capture: true, once: true },
+              )
+            }
+          }}
+          onFocusOutside={(e) => {
+            e.preventDefault()
+          }}
+        >
+          <ComposeEventInner
+            summaryRef={summaryRef}
+            onCreated={() => setDraftPopoverOpen(false)}
+            onCancel={() => setDraftPopoverOpen(false)}
+          />
+        </PopoverContent>
+      </Popover>
 
+      {/* Standalone — NOT nested in the Popover. Nesting it inside the (still
+          mounted) popover let the popover's onPointerDownOutside swallow clicks
+          on these buttons, so the prompt appeared dead. */}
       <Dialog open={confirmDiscardOpen} onOpenChange={(o) => !o && discardDraft()}>
         <DialogContent>
           <DialogHeader>
@@ -132,6 +137,6 @@ export function PopoverNewEvent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Popover>
+    </>
   )
 }

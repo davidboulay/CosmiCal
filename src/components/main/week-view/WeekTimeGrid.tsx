@@ -34,7 +34,7 @@ import {
 } from "@/lib/event-time"
 import { isDeclinedEvent, isEventReadonly, isPendingEvent } from "@/lib/event-utils"
 import { cn } from "@/lib/utils"
-import { weatherCodeToEmoji, weatherCodeToLabel } from "@/lib/weather"
+import { weatherCodeToEmoji, weatherCodeToLabel, weatherSiteUrl } from "@/lib/weather"
 
 import { ChevronDownIcon } from "@/icons/chevron-down"
 
@@ -103,6 +103,7 @@ export function WeekTimeGrid({
   const { activeEvent, setActiveEventKey } = useCalEvents()
   const {
     draftPopoverOpen,
+    draftEvent: composeDraft,
     setDraftEvent,
     setDraftPopoverOpen,
     setIsDrafting,
@@ -123,6 +124,19 @@ export function WeekTimeGrid({
       requestSave(withDates(event, range.start, range.end), event)
     },
     [requestSave],
+  )
+
+  // Same drag, but for the in-progress new-event draft tile: update the compose
+  // draft's start/end (no save) so dragging/resizing it during creation works
+  // and is reflected in the open popover's time pickers.
+  const handleDraftTimeChange = useCallback(
+    (event: CalendarEvent, newStartMin: number, newEndMin: number) => {
+      let range = { start: event.start, end: event.end }
+      range = withRangeStartWallclockTime(range, Math.floor(newStartMin / 60), newStartMin % 60)
+      range = withRangeEndWallclockTime(range, Math.floor(newEndMin / 60), newEndMin % 60)
+      setDraftEvent({ ...composeDraft, start: range.start, end: range.end })
+    },
+    [composeDraft, setDraftEvent],
   )
 
   // Gutter holds one hour-label column per zone: the extra zones first, then the
@@ -871,7 +885,11 @@ export function WeekTimeGrid({
                       dimmed={dimmed}
                       onEventClick={onEventClick}
                       onTimeChange={
-                        isEventReadonly(layout.event, calendars) ? undefined : handleEventTimeChange
+                        layout.event === draftEvent
+                          ? handleDraftTimeChange
+                          : isEventReadonly(layout.event, calendars)
+                            ? undefined
+                            : handleEventTimeChange
                       }
                     />
                   )
@@ -1109,11 +1127,10 @@ const DayHeaders = ({
   dimmed: boolean
   onDayClick: (date: Date) => void
 }) => {
-  const weather = useWeather()
-  const { weatherLocation } = useSettings()
+  const { forecast, location } = useWeather()
 
   return days.map((day) => {
-    const w = weather.get(day.dateKey)
+    const w = forecast.get(day.dateKey)
     return (
       <div
         key={day.dateKey}
@@ -1147,11 +1164,10 @@ const DayHeaders = ({
           <button
             type="button"
             className="flex items-center gap-1 text-[10px] text-muted-foreground leading-none cursor-pointer hover:text-foreground transition-colors"
-            title={`${weatherCodeToLabel(w.code)} — open forecast`}
+            title={`${weatherCodeToLabel(w.code)}${location ? ` in ${location.label}` : ""} — open forecast`}
             onClick={(e) => {
               e.stopPropagation()
-              const q = weatherLocation.trim() ? `weather ${weatherLocation.trim()}` : "weather"
-              void openUrl(`https://www.google.com/search?q=${encodeURIComponent(q)}`)
+              void openUrl(weatherSiteUrl(location))
             }}
           >
             <span className="text-sm leading-none">{weatherCodeToEmoji(w.code)}</span>

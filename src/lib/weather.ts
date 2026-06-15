@@ -91,9 +91,16 @@ async function fetchForecast(lat: number, lon: number, unit: WeatherUnit): Promi
   }))
 }
 
+export type Forecast = {
+  days: DailyWeather[]
+  /** The resolved location (with coordinates), so callers can deep-link to a
+   * weather site for the right place. Null when resolution failed. */
+  location: Located | null
+}
+
 // Cache the forecast briefly so view switches / remounts don't refetch (and to
 // stay well under ipapi.co's free limit). Keyed by the manual-location string.
-let cache: { key: string; ts: number; data: DailyWeather[] } | null = null
+let cache: { key: string; ts: number; data: Forecast } | null = null
 const CACHE_MS = 30 * 60 * 1000
 
 export function clearWeatherCache() {
@@ -103,17 +110,27 @@ export function clearWeatherCache() {
 export async function getForecast(
   manualLocation: string,
   unit: WeatherUnit = "celsius",
-): Promise<DailyWeather[]> {
+): Promise<Forecast> {
   // Key by location AND unit so toggling C/F refetches in the right unit.
   const key = `${unit}:${manualLocation.trim()}`
   const now = Date.now()
   if (cache && cache.key === key && now - cache.ts < CACHE_MS) return cache.data
 
   const loc = await resolveWeatherLocation(manualLocation.trim())
-  if (!loc) return []
-  const data = await fetchForecast(loc.lat, loc.lon, unit)
+  if (!loc) return { days: [], location: null }
+  const days = await fetchForecast(loc.lat, loc.lon, unit)
+  const data: Forecast = { days, location: loc }
   cache = { key, ts: now, data }
   return data
+}
+
+/** A deep link to a normal weather site (weather.com) for the given place,
+ * using coordinates so it resolves anywhere in the world. */
+export function weatherSiteUrl(location: Located | null): string {
+  if (location) {
+    return `https://weather.com/weather/today/l/${location.lat},${location.lon}`
+  }
+  return "https://weather.com"
 }
 
 // WMO weather code → emoji + label. See Open-Meteo docs for the code table.
