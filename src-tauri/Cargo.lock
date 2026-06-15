@@ -3946,7 +3946,7 @@ dependencies = [
 
 [[package]]
 name = "rencal"
-version = "0.2.19"
+version = "0.2.20"
 dependencies = [
  "ab_glyph",
  "anyhow",

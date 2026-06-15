@@ -118,6 +118,39 @@ pub async fn check() -> UpdateInfo {
     }
 }
 
+/// Relaunch the app after an update installed a new binary.
+///
+/// We deliberately do **not** use `AppHandle::restart()`: it spawns the new
+/// process while this one is still exiting and still holds the single-instance
+/// abstract socket (see `single_instance.rs`). The new process then sees the
+/// name in use, sends a `focus` signal, and exits — leaving nothing running,
+/// which is exactly the "had to relaunch manually" symptom.
+///
+/// Instead we spawn a detached helper that sleeps ~1s — long enough for THIS
+/// process to exit and the kernel to release the abstract name — then `exec`s
+/// the new binary, which now binds the socket cleanly. The caller exits right
+/// after. The helper runs in its own process group so the parent's exit can't
+/// take it down.
+pub fn relaunch_for_update() {
+    let Ok(exe) = std::env::current_exe() else {
+        log::warn!("update: current_exe() failed; cannot relaunch");
+        return;
+    };
+    let mut cmd = std::process::Command::new("sh");
+    // `$0` carries the exe path as a positional arg, so paths with spaces or
+    // shell metacharacters pass through verbatim (no string interpolation).
+    cmd.arg("-c").arg("sleep 1; exec \"$0\"").arg(&exe);
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
+    match cmd.spawn() {
+        Ok(_) => log::info!("update: relaunch helper spawned for {}", exe.display()),
+        Err(e) => log::warn!("update: could not spawn relaunch helper: {e}"),
+    }
+}
+
 /// Download the release `.deb` and install it with apt via PolicyKit. `pkexec`
 /// shows the system password dialog. Returns Ok once apt exits 0.
 pub async fn download_and_install(deb_url: String) -> Result<(), String> {

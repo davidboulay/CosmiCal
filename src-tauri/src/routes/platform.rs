@@ -67,6 +67,10 @@ impl PlatformApi for PlatformApiImpl {
         crate::updater::download_and_install(deb_url).await
     }
     async fn restart_app<R: tauri::Runtime>(self, app_handle: tauri::AppHandle<R>) {
-        app_handle.restart();
+        // Spawn the race-free relauncher (waits for our single-instance socket to
+        // free), then exit. NOT app_handle.restart() — that races the guard and
+        // the new process exits as a "duplicate", leaving nothing running.
+        crate::updater::relaunch_for_update();
+        app_handle.exit(0);
     }
 }
