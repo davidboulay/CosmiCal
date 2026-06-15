@@ -3,7 +3,7 @@ import { useMemo } from "react"
 
 import type { Calendar } from "@/rpc/bindings"
 
-import type { CalendarEvent } from "@/lib/cal-events"
+import { eventKey, type CalendarEvent } from "@/lib/cal-events"
 import { getCalendarColor } from "@/lib/calendar-styles"
 import { isAllDay } from "@/lib/event-time"
 import { DAY_MINUTES, daysDiff, MS_PER_DAY } from "@/lib/time"
@@ -68,8 +68,15 @@ const OVERLAP_EPS = 1e-5
 function assignOverlapColumns(events: WeekTimedEventLayout[]) {
   if (events.length === 0) return
 
-  // Sort by top, then by height descending
-  events.sort((a, b) => a.top - b.top || b.height - a.height)
+  // Sort by top, then by height descending, then by a stable event-identity
+  // key. The identity tiebreaker is essential: without it, two events with the
+  // same start and duration compared equal, so their column order followed the
+  // input array order — and when a reload returned them in a different order
+  // they'd swap columns, causing the visible "flip-flopping" every sync.
+  events.sort(
+    (a, b) =>
+      a.top - b.top || b.height - a.height || eventKey(a.event).localeCompare(eventKey(b.event)),
+  )
 
   // Build collision groups: events that transitively overlap
   const groups: WeekTimedEventLayout[][] = []

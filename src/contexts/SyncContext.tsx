@@ -85,56 +85,75 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     autoSyncEnabledRef.current = autoSyncEnabled
   }, [autoSyncEnabled])
 
-  const runSync = useCallback(
-    async (apply: boolean) => {
-      const calendarSlugs = calendars.filter((c) => c.provider !== null).map((c) => c.slug)
-      if (calendarSlugs.length === 0 || isSyncingRef.current) return
+  // Read calendars through a ref so `runSync`'s identity stays stable. If it
+  // depended on the `calendars` array, every calendar reload (which fires on
+  // CALDIR_CHANGED — emitted by sync's own file writes) would change runSync,
+  // re-fire the sync effect, and trigger another sync → an endless sync/reload
+  // loop, especially when a stuck change keeps work pending.
+  const calendarsRef = useRef(calendars)
+  useEffect(() => {
+    calendarsRef.current = calendars
+  }, [calendars])
 
-      isSyncingRef.current = true
-      setIsChecking(true)
-      setSyncError(null)
-      // Seed every syncing calendar as "pending"; backend sync-progress events
-      // then advance each one through checking → checked/pulling/pushing → done.
-      setCalendarStatuses(
-        Object.fromEntries(calendarSlugs.map((slug) => [slug, { phase: "pending" as const }])),
-      )
-      try {
-        const previews = await rpc.caldir.sync_preview()
-        const withWork = previews.filter((p) => p.to_push_count > 0 || p.to_pull_count > 0)
-        setPendingPreviews(withWork)
-        setIsChecking(false)
-
-        if (!apply) {
-          isSyncingRef.current = false
-          return
-        }
-
-        const tripped = previews.filter((p) => p.to_push_delete_count >= MASS_DELETE_THRESHOLD)
-
-        if (withWork.length > 0) {
-          setIsSyncing(true)
-          await rpc.caldir.sync([])
-          setIsSyncing(false)
-        }
-
-        if (tripped.length > 0) {
-          setPendingMassDelete(tripped)
-          // Keep isSyncingRef true while the dialog is open so auto-syncs don't
-          // pile up. confirmMassDelete / cancelMassDelete release it.
-          // Leave pendingPreviews as-is so the count still reflects what's outstanding.
-          return
-        }
-
-        setPendingPreviews([])
-      } catch (e) {
-        setSyncError(e instanceof Error ? e.message : String(e))
-      }
-      isSyncingRef.current = false
-      setIsChecking(false)
-      setIsSyncing(false)
-    },
+  // A stable key for the *set* of calendars (their slugs). Reloads that return
+  // the same calendars produce the same key, so they don't re-trigger sync;
+  // it changes only when an account/calendar is genuinely added or removed.
+  const calendarKey = useMemo(
+    () =>
+      calendars
+        .map((c) => c.slug)
+        .sort()
+        .join("|"),
     [calendars],
   )
+
+  const runSync = useCallback(async (apply: boolean) => {
+    const calendarSlugs = calendarsRef.current.filter((c) => c.provider !== null).map((c) => c.slug)
+    if (calendarSlugs.length === 0 || isSyncingRef.current) return
+
+    isSyncingRef.current = true
+    setIsChecking(true)
+    setSyncError(null)
+    // Seed every syncing calendar as "pending"; backend sync-progress events
+    // then advance each one through checking → checked/pulling/pushing → done.
+    setCalendarStatuses(
+      Object.fromEntries(calendarSlugs.map((slug) => [slug, { phase: "pending" as const }])),
+    )
+    try {
+      const previews = await rpc.caldir.sync_preview()
+      const withWork = previews.filter((p) => p.to_push_count > 0 || p.to_pull_count > 0)
+      setPendingPreviews(withWork)
+      setIsChecking(false)
+
+      if (!apply) {
+        isSyncingRef.current = false
+        return
+      }
+
+      const tripped = previews.filter((p) => p.to_push_delete_count >= MASS_DELETE_THRESHOLD)
+
+      if (withWork.length > 0) {
+        setIsSyncing(true)
+        await rpc.caldir.sync([])
+        setIsSyncing(false)
+      }
+
+      if (tripped.length > 0) {
+        setPendingMassDelete(tripped)
+        // Keep isSyncingRef true while the dialog is open so auto-syncs don't
+        // pile up. confirmMassDelete / cancelMassDelete release it.
+        // Leave pendingPreviews as-is so the count still reflects what's outstanding.
+        return
+      }
+
+      setPendingPreviews([])
+    } catch (e) {
+      setSyncError(e instanceof Error ? e.message : String(e))
+    }
+    isSyncingRef.current = false
+    setIsChecking(false)
+    setIsSyncing(false)
+  }, [])
 
   const requestSync = useCallback(() => runSync(autoSyncEnabledRef.current), [runSync])
   const syncNow = useCallback(() => runSync(true), [runSync])
@@ -202,9 +221,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!settingsLoaded) return
+    if (!settingsLoaded || !calendarKey) return
     void runSync(autoSyncEnabled)
-  }, [runSync, autoSyncEnabled, settingsLoaded])
+    // Keyed on the calendar *set*, not the array reference, so a content-only
+    // reload (CALDIR_CHANGED) doesn't kick off another sync.
+  }, [runSync, autoSyncEnabled, settingsLoaded, calendarKey])
 
   useEffect(() => {
     const unlisten = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
