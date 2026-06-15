@@ -1,5 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 
 import { useCalEvents } from "@/contexts/CalEventsContext"
@@ -11,7 +20,19 @@ import { ComposeEventInner } from "./ComposeEvent"
 import { useEventPopoverTabTrap } from "./useEventPopoverTabTrap"
 
 export function PopoverNewEvent() {
-  const { draftPopoverOpen, setDraftPopoverOpen } = useEventDraft()
+  const { draftPopoverOpen, setDraftPopoverOpen, draftEvent, createDraftEvent } = useEventDraft()
+  // When dismissing a draft that has content, confirm rather than silently
+  // discarding it.
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const hasContent = () => !!draftEvent.summary?.trim()
+
+  const requestClose = () => {
+    if (hasContent()) {
+      setConfirmDiscard(true)
+    } else {
+      setDraftPopoverOpen(false)
+    }
+  }
   const { activeEvent } = useCalEvents()
   const anchorRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -50,7 +71,7 @@ export function PopoverNewEvent() {
     <Popover
       open={draftPopoverOpen}
       onOpenChange={(open) => {
-        if (!open) setDraftPopoverOpen(false)
+        if (!open) requestClose()
       }}
     >
       <PopoverAnchor
@@ -68,6 +89,12 @@ export function PopoverNewEvent() {
         onOpenAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement
+          // Don't dismiss when interacting with a portaled Select dropdown
+          // (calendar/repeat/reminder) inside the compose form.
+          if (target.closest("[data-radix-popper-content-wrapper],[role='listbox']")) {
+            e.preventDefault()
+            return
+          }
           if (target.closest("[data-event-clickable]")) {
             e.preventDefault()
           } else {
@@ -91,6 +118,38 @@ export function PopoverNewEvent() {
           onCancel={() => setDraftPopoverOpen(false)}
         />
       </PopoverContent>
+
+      <Dialog open={confirmDiscard} onOpenChange={(o) => !o && setConfirmDiscard(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add this event?</DialogTitle>
+            <DialogDescription>
+              You started creating "{draftEvent.summary?.trim() || "Untitled"}". Add it to your
+              calendar, or discard it?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirmDiscard(false)
+                setDraftPopoverOpen(false)
+              }}
+            >
+              Discard
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmDiscard(false)
+                void createDraftEvent()
+                setDraftPopoverOpen(false)
+              }}
+            >
+              Add event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Popover>
   )
 }

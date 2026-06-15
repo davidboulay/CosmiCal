@@ -81,6 +81,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarSyncStatus>>({})
   const [pendingMassDelete, setPendingMassDelete] = useState<SyncPreview[] | null>(null)
   const isSyncingRef = useRef(false)
+  // Timestamp of the last full sweep, to throttle focus-triggered syncs.
+  const lastFullSyncRef = useRef(0)
   // Read in the stable `requestSync` callback so post-edit/post-create calls
   // honor the current toggle without changing `requestSync`'s identity.
   const autoSyncEnabledRef = useRef(autoSyncEnabled)
@@ -114,6 +116,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const calendarSlugs = calendarsRef.current.filter((c) => c.provider !== null).map((c) => c.slug)
     if (calendarSlugs.length === 0 || isSyncingRef.current) return
 
+    lastFullSyncRef.current = Date.now()
     isSyncingRef.current = true
     setIsChecking(true)
     setSyncError(null)
@@ -262,9 +265,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     // reload (CALDIR_CHANGED) doesn't kick off another sync.
   }, [runSync, autoSyncEnabled, settingsLoaded, calendarKey])
 
+  // Refresh when the window regains focus, but throttled — otherwise routine
+  // focus changes (closing a dialog, alt-tabbing) would re-run the whole sweep
+  // every time. Only sync if it's been a while since the last full sync.
+  const FOCUS_SYNC_THROTTLE_MS = 5 * 60_000
   useEffect(() => {
     const unlisten = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (focused && settingsLoaded) {
+      if (
+        focused &&
+        settingsLoaded &&
+        Date.now() - lastFullSyncRef.current > FOCUS_SYNC_THROTTLE_MS
+      ) {
         void runSync(autoSyncEnabled)
       }
     })
@@ -272,6 +283,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       unlisten.then((fn) => fn())
     }
   }, [runSync, autoSyncEnabled, settingsLoaded])
+
+  // Gentle periodic refresh so calendars stay current even if the window is
+  // never refocused and nothing is edited.
+  const PERIODIC_SYNC_MS = 15 * 60_000
+  useEffect(() => {
+    if (!settingsLoaded) return
+    const id = setInterval(() => void runSync(autoSyncEnabledRef.current), PERIODIC_SYNC_MS)
+    return () => clearInterval(id)
+  }, [runSync, settingsLoaded])
 
   const value = useMemo<SyncContextType>(
     () => ({
