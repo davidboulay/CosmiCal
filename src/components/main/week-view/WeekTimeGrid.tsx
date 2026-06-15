@@ -1128,6 +1128,7 @@ const DayHeaders = ({
   onDayClick: (date: Date) => void
 }) => {
   const { forecast, location } = useWeather()
+  const { weatherUnit } = useSettings()
 
   return days.map((day) => {
     const w = forecast.get(day.dateKey)
@@ -1167,7 +1168,7 @@ const DayHeaders = ({
             title={`${weatherCodeToLabel(w.code)}${location ? ` in ${location.label}` : ""} — open forecast`}
             onClick={(e) => {
               e.stopPropagation()
-              void openUrl(weatherSiteUrl(location))
+              void openUrl(weatherSiteUrl(location, weatherUnit))
             }}
           >
             <span className="text-sm leading-none">{weatherCodeToEmoji(w.code)}</span>

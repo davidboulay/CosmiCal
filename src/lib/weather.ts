@@ -125,12 +125,15 @@ export async function getForecast(
 }
 
 /** A deep link to a normal weather site (weather.com) for the given place,
- * using coordinates so it resolves anywhere in the world. */
-export function weatherSiteUrl(location: Located | null): string {
+ * using coordinates so it resolves anywhere in the world. The `unit` query
+ * param forces the temperature unit (m = metric/°C, e = imperial/°F) so the
+ * site matches the app's setting instead of the browser locale's default. */
+export function weatherSiteUrl(location: Located | null, unit: WeatherUnit = "celsius"): string {
+  const u = unit === "fahrenheit" ? "e" : "m"
   if (location) {
-    return `https://weather.com/weather/today/l/${location.lat},${location.lon}`
+    return `https://weather.com/weather/today/l/${location.lat},${location.lon}?unit=${u}`
   }
-  return "https://weather.com"
+  return `https://weather.com?unit=${u}`
 }
 
 // WMO weather code → emoji + label. See Open-Meteo docs for the code table.
