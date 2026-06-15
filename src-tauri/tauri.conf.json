@@ -29,6 +29,14 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Office",
+    "fileAssociations": [
+      {
+        "ext": ["ics"],
+        "mimeType": "text/calendar",
+        "description": "iCalendar event"
+      }
+    ],
     "resources": [
       "providers/caldir-provider-google",
       "providers/caldir-provider-icloud",

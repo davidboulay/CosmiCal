@@ -5,12 +5,6 @@ import { toast } from "sonner"
 import { DeleteConfirmDialog } from "@/components/event-parts/DeleteConfirmDialog"
 import { EventInfo } from "@/components/event-parts/EventInfo"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 import { rpc } from "@/rpc"
 import type { ResponseStatus } from "@/rpc/bindings"
@@ -32,7 +26,7 @@ import {
 import { getUserResponseStatus, isCalendarWritable, isEventReadonly } from "@/lib/event-utils"
 import { recurrenceToRRuleSet, rruleToRecurrence } from "@/lib/rrule-utils"
 
-import { MoreHorizIcon } from "@/icons/more-horiz"
+import { TrashIcon } from "@/icons/trash"
 
 export const EditEvent = ({
   event,
@@ -163,7 +157,17 @@ export const EditEvent = ({
         {children}
 
         {isCalendarWritable(dirtyEvent, calendars) && (
-          <OverflowMenu onDelete={() => triggerDelete(dirtyEvent)} tabIndex={-1} />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            tabIndex={-1}
+            title="Delete event"
+            aria-label="Delete event"
+            onClick={() => triggerDelete(dirtyEvent)}
+          >
+            <TrashIcon className="size-4" />
+          </Button>
         )}
       </div>
 
@@ -230,22 +234,5 @@ export const EditEvent = ({
 
       <DeleteConfirmDialog {...deleteDialogProps} />
     </div>
-  )
-}
-
-const OverflowMenu = ({ onDelete, tabIndex }: { onDelete: () => void; tabIndex?: number }) => {
-  return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7" tabIndex={tabIndex}>
-          <MoreHorizIcon className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem variant="destructive" onClick={onDelete}>
-          Delete event
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

@@ -56,32 +56,54 @@ fn socket_path() -> PathBuf {
 pub fn try_acquire_or_signal(message: &str) -> Option<InstanceGuard> {
     let path = socket_path();
 
-    // Existing instance? Send the message and bail.
+    // Bind-first so acquisition is atomic. This avoids the classic race where
+    // two launches both see "no socket" via connect(), then both bind/self-
+    // promote and you end up with two windows (e.g. session-restore + autostart
+    // firing together on login).
+    for _ in 0..5 {
+        match UnixListener::bind(&path) {
+            Ok(listener) => {
+                return Some(InstanceGuard {
+                    listener: Some(listener),
+                    path,
+                });
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+                // Something already holds the path. If it's a live instance,
+                // signal it and exit; if it's a stale socket from a crash,
+                // remove it and retry the bind.
+                if let Ok(mut stream) = UnixStream::connect(&path) {
+                    let _ = stream.write_all(message.as_bytes());
+                    let _ = stream.write_all(b"\n");
+                    return None;
+                }
+                let _ = std::fs::remove_file(&path);
+                continue;
+            }
+            Err(e) => {
+                // No permission / unexpected error: we can't own the role, but
+                // a window is better than nothing — duplicates are recoverable.
+                log::warn!("could not bind single-instance socket: {e}");
+                return Some(InstanceGuard {
+                    listener: None,
+                    path,
+                });
+            }
+        }
+    }
+
+    // Exhausted retries (a live peer kept winning the bind, or a stale file we
+    // couldn't clear): try one last signal, else run as a lone window.
     if let Ok(mut stream) = UnixStream::connect(&path) {
         let _ = stream.write_all(message.as_bytes());
         let _ = stream.write_all(b"\n");
         return None;
     }
-
-    // No live instance. Clear any stale file from a prior crash.
-    let _ = std::fs::remove_file(&path);
-
-    match UnixListener::bind(&path) {
-        Ok(listener) => Some(InstanceGuard {
-            listener: Some(listener),
-            path,
-        }),
-        Err(e) => {
-            // Race with another launch, or no permission to bind. We can't
-            // own the role; treat ourselves as "first" anyway so the user
-            // still gets a window — duplicates are recoverable, no-app isn't.
-            log::warn!("could not bind single-instance socket: {e}");
-            Some(InstanceGuard {
-                listener: None,
-                path,
-            })
-        }
-    }
+    log::warn!("single-instance: gave up acquiring socket after retries");
+    Some(InstanceGuard {
+        listener: None,
+        path,
+    })
 }
 
 /// Spawn a thread that listens for messages from secondary launches and
